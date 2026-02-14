@@ -1,0 +1,20 @@
+[project]
+name = "evaluator"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "deepgram-sdk>=5.3.2",
+    "python-dotenv>=1.2.1",
+    "assemblyai>=0.33.0",
+]
+
+[dependency-groups]
+dev = [
+    "deepgram-sdk>=5.3.2",
+    "pylint>=4.0.4",
+    "pyright>=1.1.408",
+    "pytest>=9.0.2",
+    "pytest-mock>=3.15.1",
+]
