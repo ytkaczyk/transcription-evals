@@ -1,0 +1,27 @@
+{
+    "inputs": [
+        {
+            "audio": "sample-01.mp3",
+            "transcript": "sample-01.json"
+        }
+    ],
+    "models": [
+        {
+            "name": "Deepgram",
+            "options": {
+                "model": "nova-3"
+            }
+        },
+        {
+            "name": "AssemblyAI",
+            "label": "v3",
+            "options": {
+                "prompt": "Transcribe verbatim. Maximum readability. Pay attention to rare words and entities. Pharmaceutical accuracy required across all medications and drug names. Preserve natural speech patterns."
+            }
+        }
+    ],
+    "paths": {
+        "inputs": "./datasets/podcasts/inputs",
+        "outputs": "./evals/"
+    }
+}
