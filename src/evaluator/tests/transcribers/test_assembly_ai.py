@@ -84,7 +84,7 @@ class TestAssemblyAITranscriber:
         mock_transcript.utterances = [u1, u2]
         mock_transcriber_instance.transcribe.return_value = mock_transcript
 
-        result = transcriber.transcribe(
+        transcriber.transcribe(
             "test.mp3", options={"prompt": "custom prompt"})
 
         # Verify config creation
@@ -125,7 +125,7 @@ class TestAssemblyAITranscriber:
         mock_config_cls.assert_called_once_with(
             speech_models=["universal-3-pro"],
             speaker_labels=True,
-            prompt="Transcribe this audio, Transcribe verbatim"
+            prompt="Transcribe this audio, Transcribe verbatim."
         )
 
         # Verify result format

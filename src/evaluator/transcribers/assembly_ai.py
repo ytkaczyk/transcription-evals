@@ -65,7 +65,7 @@ class AssemblyAITranscriber(AbstractTranscriber):
 
             # Set default prompt if not provided in options
             if "prompt" not in config_params:
-                config_params["prompt"] = "Transcribe this audio, Transcribe verbatim"
+                config_params["prompt"] = "Transcribe this audio, Transcribe verbatim."
 
             config = aai.TranscriptionConfig(**config_params)
 
