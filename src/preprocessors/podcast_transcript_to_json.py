@@ -109,6 +109,7 @@ def main():
                         help='File encoding to read input (default: "utf-8")')
     args = parser.parse_args()
 
+    # file: snyk-ignore python/PT
     in_path = Path(args.input_file)
     if not in_path.exists() or not in_path.is_file():
         raise FileNotFoundError(f"Input file not found: {in_path}")
@@ -128,6 +129,7 @@ def main():
 
     # Write JSON with UTF-8 and pretty formatting
     with out_path.open("w", encoding="utf-8") as f:
+        # file: snyk-ignore python/PT
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     print(f"Wrote: {out_path.resolve()}")

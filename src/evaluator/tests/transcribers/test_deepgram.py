@@ -1,3 +1,4 @@
+# file: snyk-ignore python/HardcodedNonCryptoSecret/test
 """
 Unit tests for DeepgramTranscriber.
 """
@@ -55,13 +56,15 @@ class TestDeepgramTranscriber:
         # pylint: disable=unused-argument
         transcriber = DeepgramTranscriber()
         assert transcriber.api_key == "test_env_key"
-        mock_deepgram_client_cls.assert_called_once_with("test_env_key")
+        mock_deepgram_client_cls.assert_called_once_with(
+            api_key="test_env_key")
 
     def test_init_with_explicit_key(self, mock_deepgram_client_cls):
         """Test initialization with explicit API key."""
         transcriber = DeepgramTranscriber(api_key="explicit_key")
         assert transcriber.api_key == "explicit_key"
-        mock_deepgram_client_cls.assert_called_once_with("explicit_key")
+        mock_deepgram_client_cls.assert_called_once_with(
+            api_key="explicit_key")
 
     def test_name_property(self, mock_env_api_key, mock_deepgram_client_cls):
         """Test the name property."""

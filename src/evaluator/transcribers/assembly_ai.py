@@ -18,13 +18,12 @@ class AssemblyAITranscriber(AbstractTranscriber):
     Transcriber implementation using AssemblyAI API.
     """
 
-    def __init__(self, api_key: Optional[str] = None, prompt: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None):
         """
         Initialize the AssemblyAI transcriber.
 
         Args:
             api_key (Optional[str]): The AssemblyAI API key. If not provided, it will be read from the environment variable ASSEMBLYAI_API_KEY.
-            prompt (Optional[str]): Optional prompt to configure the transcription (e.g., for custom spelling or context).
         """
         self.api_key = api_key or os.getenv("ASSEMBLYAI_API_KEY")
         if not self.api_key:
@@ -37,7 +36,6 @@ class AssemblyAITranscriber(AbstractTranscriber):
 
         aai.settings.api_key = self.api_key
         self.transcriber = aai.Transcriber()
-        self.prompt = prompt
 
     @property
     def name(self) -> str:
@@ -61,11 +59,13 @@ class AssemblyAITranscriber(AbstractTranscriber):
                 "speaker_labels": True,
             }
 
-            if self.prompt:
-                config_params["prompt"] = self.prompt
-
+            # Merge options from the config file, allowing them to override defaults
             if options:
                 config_params.update(options)
+
+            # Set default prompt if not provided in options
+            if "prompt" not in config_params:
+                config_params["prompt"] = "Transcribe this audio, Transcribe verbatim"
 
             config = aai.TranscriptionConfig(**config_params)
 

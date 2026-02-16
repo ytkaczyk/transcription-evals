@@ -1,3 +1,4 @@
+# file: snyk-ignore python/HardcodedNonCryptoSecret/test
 """
 Unit tests for TranscriberFactory.
 """

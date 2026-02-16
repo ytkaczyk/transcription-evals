@@ -32,7 +32,7 @@ The configuration file is a JSON file with the following structure:
 {
     "inputs": [
         {
-            "sound": "sample-01.mp3",  // Audio file name
+            "audio": "sample-01.mp3",  // Audio file name
             "transcript": "sample-01.json"  // Ground truth transcript file name
         }
     ],
@@ -50,8 +50,8 @@ The configuration file is a JSON file with the following structure:
         }
     ],
     "paths": {
-        "input": "../datasets/podcasts/input",  // Base path for input files
-        "output": "./results"  // Base path for output results
+        "inputs": "../datasets/podcasts/inputs",  // Base path for input files
+        "outputs": "./evals/podcasts"  // Base path for output results
     }
 }
 ```

@@ -63,16 +63,16 @@ def reencode_to_mp3_16k_mono(src: Path, dst: Path, bitrate: str = "64k") -> None
 def main():
     parser = argparse.ArgumentParser(
         description="Re-encode MP3 to 16 kHz mono MP3 for ASR.")
-    parser.add_argument("input", help="Path to the source MP3 file")
+    parser.add_argument("source", help="Path to the source MP3 file")
     parser.add_argument("--bitrate", default="64k",
                         help="Target bitrate, e.g., 64k or 48k (default: 64k)")
     parser.add_argument(
         "--out", help="Optional output path. If omitted, defaults to <filename>.16k.mono.mp3.")
     args = parser.parse_args()
 
-    src = Path(args.input).expanduser().resolve()
+    src = Path(args.source).expanduser().resolve()
     if not src.exists() or not src.is_file():
-        sys.stderr.write(f"Input file not found: {src}\n")
+        sys.stderr.write(f"Source file not found: {src}\n")
         sys.exit(1)
 
     # Default to overwrite the source file, as requested

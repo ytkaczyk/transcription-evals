@@ -7,6 +7,7 @@ from .assembly_ai import AssemblyAITranscriber
 from .deepgram import DeepgramTranscriber
 from .transcriber_factory import TranscriberFactory
 
+
 # Register known transcribers
 TranscriberFactory.register("Deepgram", DeepgramTranscriber)
 TranscriberFactory.register("AssemblyAI", AssemblyAITranscriber)

@@ -3,7 +3,7 @@ Deepgram transcriber implementation.
 """
 import os
 import logging
-from typing import List, Optional, Dict, Any, cast
+from typing import List, Optional, Dict, Any
 
 from deepgram import DeepgramClient
 # Using lazy import to avoid circular dependency issues if any,
@@ -29,7 +29,7 @@ class DeepgramTranscriber(AbstractTranscriber):
                 "or pass it to the constructor."
             )
 
-        self.client = DeepgramClient(self.api_key)
+        self.client = DeepgramClient(api_key=self.api_key)
 
     @property
     def name(self) -> str:
@@ -96,8 +96,8 @@ class DeepgramTranscriber(AbstractTranscriber):
                 **default_options
             )
 
-            raw_output = cast(Any, response).to_dict() if hasattr(
-                response, "to_dict") else None
+            raw_output = response.model_dump(mode='json') if hasattr(
+                response, "model_dump") else None
 
             conversation_items: List[ConversationItem] = []
             duration = 0.0
@@ -105,9 +105,8 @@ class DeepgramTranscriber(AbstractTranscriber):
             # The SDK types this as Union[ListenV1Response, ListenV1AcceptedResponse]
             # We assume ListenV1Response when no callback is used.
             if isinstance(response, ListenV1Response):
-                if response.metadata:
-                    duration = response.metadata.duration or 0.0
-
+                if response.metadata and response.metadata.duration is not None:
+                    duration = response.metadata.duration
                 results = response.results
                 if results:
                     if results.utterances:

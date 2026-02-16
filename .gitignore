@@ -1,7 +1,6 @@
 # --- Project Specific ---
 snyk_rules.instructions.md
-datasets/*
-evals/*
+experiments/evals/*
 
 # --- Environments & Secrets ---
 .env
@@ -39,4 +38,4 @@ Thumbs.db
 # --- IDEs ---
 .vscode/
 .idea/
-
+**/.dccache
