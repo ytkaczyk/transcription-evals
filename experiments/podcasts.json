@@ -3,6 +3,22 @@
         {
             "audio": "sample-01.mp3",
             "transcript": "sample-01.json"
+        },
+        {
+            "audio": "sample-02.mp3",
+            "transcript": "sample-02.json"
+        },
+        {
+            "audio": "sample-03.mp3",
+            "transcript": "sample-03.json"
+        },
+        {
+            "audio": "sample-04.mp3",
+            "transcript": "sample-04.json"
+        },
+        {
+            "audio": "sample-05.mp3",
+            "transcript": "sample-05.json"
         }
     ],
     "models": [
@@ -22,6 +38,7 @@
     ],
     "paths": {
         "inputs": "./datasets/podcasts/inputs",
-        "outputs": "./evals/"
+        "outputs": "./evals/",
+        "excel-report-template": "./templates/experiments-report-template.xlsx"
     }
 }

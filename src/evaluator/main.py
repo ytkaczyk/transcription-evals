@@ -11,7 +11,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from evaluator import Evaluator
-from evaluator_types import GlobalContext, RuntimeDirectories
+from evaluator_types import GlobalContext, RuntimePaths
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str, str]:
+def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str, str, str]:
     """
     Creates the run output directory structure.
 
@@ -33,21 +33,21 @@ def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str,
         config_filename (str): The name of the configuration file.
 
     Returns:
-        tuple[str, str]: A tuple containing the paths to the intermediate and output directories.
+        tuple[str, str, str]: A tuple containing the paths to the intermediate and output directories, and the eval directory path.
     """
     # timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     # run_outputs_dir_name = f"{config_filename}-{timestamp}"
-    run_outputs_dir_name = f"{config_filename}"
+    eval_dir_name = f"{config_filename}"
 
-    logger.info("Run Output Directory Name: %s", run_outputs_dir_name)
+    logger.info("Run Eval Directory Name: %s", eval_dir_name)
 
-    run_outputs_path = os.path.join(outputs_base_path, run_outputs_dir_name)
+    run_eval_path = os.path.join(outputs_base_path, eval_dir_name)
 
-    os.makedirs(run_outputs_path, exist_ok=True)
+    os.makedirs(run_eval_path, exist_ok=True)
 
     # Create subdirectories
-    intermediate_dir = os.path.join(run_outputs_path, "intermediate")
-    outputs_dir = os.path.join(run_outputs_path, "outputs")
+    intermediate_dir = os.path.join(run_eval_path, "intermediate")
+    outputs_dir = os.path.join(run_eval_path, "outputs")
 
     os.makedirs(intermediate_dir, exist_ok=True)
     os.makedirs(outputs_dir, exist_ok=True)
@@ -55,10 +55,17 @@ def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str,
     logger.info("Created subdirectory: %s", intermediate_dir)
     logger.info("Created subdirectory: %s", outputs_dir)
 
-    return intermediate_dir, outputs_dir
+    return intermediate_dir, outputs_dir, run_eval_path
 
 
-def setup_directories(config_path: str, config: dict) -> RuntimeDirectories:
+def _resolve_config_path(base_dir: str, rel_path: str) -> str:
+    """Helper to resolve a path relative to the config directory."""
+    if not rel_path:
+        return ""
+    return os.path.abspath(os.path.join(base_dir, rel_path))
+
+
+def setup_paths(config_path: str, config: dict) -> RuntimePaths:
     """
     Sets up the output directories based on the configuration file.
 
@@ -67,41 +74,44 @@ def setup_directories(config_path: str, config: dict) -> RuntimeDirectories:
         config (dict): The loaded configuration dictionary.
 
     Returns:
-        RuntimeDirectories: An object containing the input, intermediate, and output directories.
+        RuntimePaths: An object containing the input, intermediate, and output directories.
     """
     try:
         # Get the directory of the configuration file
         config_dir = os.path.dirname(os.path.abspath(config_path))
 
-        cwd = os.getcwd()
-        logger.info("Current Directory: %s", cwd)
+        logger.info("Current Directory: %s", os.getcwd())
         logger.info("Config Directory: %s", config_dir)
 
-        # Resolve input and output paths
-        # Relative paths are relative to the location of the json file
-        paths = config.get("paths", {})
-        inputs_path_str = paths.get("inputs", "")
-        outputs_path_str = paths.get("outputs", "")
+        # Resolve input and output paths relative to the location of the json file
+        paths_config = config.get("paths", {})
 
-        # Join with config_dir first, then normalize
-        inputs_path = os.path.abspath(
-            os.path.join(config_dir, inputs_path_str))
-        outputs_path = os.path.abspath(
-            os.path.join(config_dir, outputs_path_str))
+        inputs_path = _resolve_config_path(
+            config_dir, paths_config.get("inputs", ""))
+        outputs_path = _resolve_config_path(
+            config_dir, paths_config.get("outputs", ""))
+
+        excel_report_template = None
+        template_rel_path = paths_config.get("excel-report-template")
+        if template_rel_path:
+            excel_report_template = _resolve_config_path(
+                config_dir, template_rel_path)
 
         logger.info("Inputs Path: %s", inputs_path)
         logger.info("Outputs Path: %s", outputs_path)
+        if excel_report_template:
+            logger.info("Excel Report Template: %s", excel_report_template)
 
-        # Create output directory: <filename>-<yyyymmdd-hhmmss>
-        config_filename = Path(config_path).stem
+        # Create output directory: <filename>
+        intermediate_dir, outputs_dir, eval_dir = _create_run_dirs(
+            outputs_path, Path(config_path).stem)
 
-        intermediate_dir, outputs_dir = _create_run_dirs(
-            outputs_path, config_filename)
-
-        return RuntimeDirectories(
+        return RuntimePaths(
             inputs_dir=inputs_path,
             intermediate_dir=intermediate_dir,
-            outputs_dir=outputs_dir
+            outputs_dir=outputs_dir,
+            eval_dir=eval_dir,
+            excel_report_template=excel_report_template
         )
 
     except Exception as e:
@@ -133,13 +143,13 @@ def main():
         config_text = Path(args.config_file).read_text(encoding='utf-8')
         config = json.loads(config_text)
 
-        dirs = setup_directories(args.config_file, config)
-        logger.info("Directories set up: %s", dirs)
+        paths = setup_paths(args.config_file, config)
+        logger.info("Paths set up: %s", paths)
 
         global_context = GlobalContext(
             args=args,
             config=config,
-            directories=dirs
+            paths=paths
         )
 
         evaluator = Evaluator(global_context)

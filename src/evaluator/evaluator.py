@@ -10,6 +10,7 @@ from typing import List
 
 import jiwer
 import jiwer.transforms
+from report_generator import generate_excel_report
 from transcribers.transcriber_factory import TranscriberFactory
 from evaluator_types import EvaluationContext, GlobalContext
 
@@ -75,6 +76,13 @@ class Evaluator:
 
                 evaluation_context.stats_path = stats_path
 
+        generate_excel_report(
+            config_path=self.global_context.args.config_file,
+            outputs_dir=self.global_context.paths.outputs_dir,
+            eval_dir=self.global_context.paths.eval_dir,
+            template_path=self.global_context.paths.excel_report_template,
+        )
+
     def _generate_output_stem(
         self, model_name: str, label: str | None, audio_file: str
     ) -> str:
@@ -102,7 +110,7 @@ class Evaluator:
 
         transcript_filename = self._generate_transcript_filename(output_stem)
         transcript_path = self._validate_safe_path(
-            self.global_context.directories.intermediate_dir, transcript_filename
+            self.global_context.paths.intermediate_dir, transcript_filename
         )
 
         if (
@@ -130,7 +138,7 @@ class Evaluator:
         try:
             # Validate paths to prevent traversal
             audio_full_path = self._validate_safe_path(
-                self.global_context.directories.inputs_dir, audio_file
+                self.global_context.paths.inputs_dir, audio_file
             )
 
             # Check input
@@ -179,7 +187,7 @@ class Evaluator:
 
         try:
             ref_path = self._validate_safe_path(
-                self.global_context.directories.inputs_dir, ref_filename
+                self.global_context.paths.inputs_dir, ref_filename
             )
             return self._get_text_from_transcript_json(ref_path), ref_filename
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -230,7 +238,7 @@ class Evaluator:
         # Compute stats
         try:
             stats_path = self._validate_safe_path(
-                self.global_context.directories.outputs_dir,
+                self.global_context.paths.outputs_dir,
                 self._generate_stats_filename(evaluation_context.output_stem),
             )
 
