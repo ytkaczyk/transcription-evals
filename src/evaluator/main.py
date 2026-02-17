@@ -6,11 +6,12 @@ import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, asdict
-# from datetime import datetime
 from pathlib import Path
+
 from dotenv import load_dotenv
-from transcribers.transcriber_factory import TranscriberFactory
+
+from evaluator import Evaluator
+from evaluator_types import GlobalContext, RuntimeDirectories
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -21,26 +22,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class RuntimeDirectories:
-    """
-    Holds the paths for the input, intermediate, and output directories.
-    """
-    inputs_dir: str
-    intermediate_dir: str
-    outputs_dir: str
-
-
-@dataclass
-class GlobalContext:
-    """
-    Holds the global state of the application.
-    """
-    args: argparse.Namespace
-    config: dict
-    directories: RuntimeDirectories
 
 
 def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str, str]:
@@ -128,114 +109,6 @@ def setup_directories(config_path: str, config: dict) -> RuntimeDirectories:
         raise
 
 
-def _validate_safe_path(base_dir: str, file_path: str) -> str:
-    """
-    Validates that file_path is safe to use relative to base_dir.
-    It returns the absolute path formed by joining base_dir and file_path.
-    If the path resolves outside base_dir, raises ValueError.
-    """
-    # Use os.path.abspath to resolve .. components
-    base_dir = os.path.abspath(base_dir)
-    full_path = os.path.abspath(os.path.join(base_dir, file_path))
-
-    # Check if full_path starts with base_dir
-    # os.path.commonpath is safer than startswith for path comparison
-    if os.path.commonpath([base_dir, full_path]) != base_dir:
-        raise ValueError(f"Path traversal attempt detected: {file_path}")
-
-    return full_path
-
-
-def _generate_output_stem(model_name: str, label: str | None, audio_file: str) -> str:
-    input_stem = Path(audio_file).stem
-    if label:
-        return f"{model_name}-{label}-{input_stem}"
-    return f"{model_name}-{input_stem}"
-
-
-def _transcribe_audio_file(transcriber, model_config: dict, input_item: dict, output_stem: str, global_context: GlobalContext) -> str:
-    # Generate output file name and path and skip the process if the file exists and lazy_transcription is True
-    transcript_filename = f"{output_stem}-transcript.json"
-    transcript_path = _validate_safe_path(
-        global_context.directories.intermediate_dir, transcript_filename)
-
-    if global_context.args.lazy_transcription and os.path.exists(transcript_path):
-        logger.info(
-            "Lazy transcription: Output file %s already exists. Skipping.", transcript_filename)
-        return transcript_path
-
-    audio_file = input_item.get("audio")
-    if not audio_file:
-        raise ValueError("Input item missing required 'audio' field.")
-
-    logger.info("Transcribing %s with %s (Label: %s) -> %s",
-                audio_file, model_config.get("name"), model_config.get("label"), transcript_filename)
-
-    try:
-        # Validate paths to prevent traversal
-        audio_full_path = _validate_safe_path(
-            global_context.directories.inputs_dir, audio_file)
-
-        # Check input
-        if not os.path.exists(audio_full_path):
-            raise FileNotFoundError(f"Input file not found: {audio_full_path}")
-
-        # Transcribe
-        transcript_result = transcriber.transcribe(
-            audio_full_path, options=model_config.get("options", {}))
-
-        # Save
-        with open(transcript_path, "w", encoding="utf-8") as f:
-            json.dump(asdict(transcript_result),
-                      f, indent=2, ensure_ascii=False)
-
-        return transcript_path
-
-    except ValueError as ve:
-        logger.error("Validation error for %s: %s", audio_file, ve)
-        raise
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Error transcribing %s: %s", audio_file, e)
-        raise
-
-
-def process_evaluations(global_context: GlobalContext):
-    """
-    Runs the evaluation loop: Model -> Input -> Transcribe -> Save.
-    """
-    models = global_context.config.get("models", [])
-    inputs = global_context.config.get("inputs", [])
-
-    for model_config in models:
-        model_name = model_config.get("name")
-        if not model_name:
-            continue
-
-        label = model_config.get("label", None)
-
-        # Create transcriber for each model
-        # We create it once per model config to handle it efficiently
-        try:
-            transcriber = TranscriberFactory.get_transcriber(
-                model_name)
-        except ValueError as e:
-            logger.error(e)
-            continue
-
-        for input_item in inputs:
-            audio_file = input_item.get("audio")
-            if not audio_file:
-                continue
-
-            output_stem = _generate_output_stem(
-                model_name, label, audio_file)
-
-            transcript_path = _transcribe_audio_file(
-                transcriber, model_config, input_item, output_stem, global_context)
-
-            logger.info("Transcript saved to: %s", transcript_path)
-
-
 def main():
     """
     Main function to run the evaluator.
@@ -269,7 +142,8 @@ def main():
             directories=dirs
         )
 
-        process_evaluations(global_context)
+        evaluator = Evaluator(global_context)
+        evaluator.run()
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Exception in main: %s", e)
