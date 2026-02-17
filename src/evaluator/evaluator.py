@@ -188,6 +188,23 @@ class Evaluator:
             )
             return None, ref_filename
 
+    def _load_hypothesis_data(self, transcript_path: str) -> tuple[str, float]:
+        """Loads hypothesis text and duration from the transcript file."""
+        try:
+            with open(transcript_path, "r", encoding="utf-8") as f:
+                hypothesis_data = json.load(f)
+
+            hypothesis_text = " ".join(
+                [item.get("content", "")
+                 for item in hypothesis_data.get("conversation", [])]
+            )
+            hypothesis_duration = hypothesis_data.get("duration", 0.0)
+            return hypothesis_text, hypothesis_duration
+        except Exception as e:
+            raise ValueError(
+                f"Failed to read hypothesis transcript {transcript_path}: {e}"
+            ) from e
+
     def _compute_stats(self, evaluation_context: EvaluationContext) -> str:
         """
         Computes WER and CER using JiWER and saves the result to <output_stem>-stats.json
@@ -197,14 +214,9 @@ class Evaluator:
                 "No transcript path provided for stats computation")
 
         # Load hypothesis
-        try:
-            hypothesis_text = self._get_text_from_transcript_json(
-                evaluation_context.transcript_path
-            )
-        except Exception as e:
-            raise ValueError(
-                f"Failed to read hypothesis transcript {evaluation_context.transcript_path}: {e}"
-            ) from e
+        hypothesis_text, hypothesis_duration = self._load_hypothesis_data(
+            evaluation_context.transcript_path
+        )
 
         # Load reference
         reference_text, ref_filename = self._load_reference_text(
@@ -258,6 +270,10 @@ class Evaluator:
             )
 
             stats = {
+                "audio_file_name": os.path.basename(evaluation_context.input.get("audio", "")),
+                "audio_file_duration": hypothesis_duration,
+                "model_name": evaluation_context.model.get("name"),
+                "model_label": evaluation_context.model.get("label"),
                 "wer": word_output.wer,
                 "mer": word_output.mer,
                 "wil": word_output.wil,
