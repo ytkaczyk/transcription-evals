@@ -15,36 +15,36 @@ A framework for evaluating audio transcription models (STT/ASR) accuracy and per
 ## Workflow
 
 ```mermaid
-graph TD
-    subgraph Inputs
-    Config[Configuration JSON]
-    Audio[Audio Files]
-    GT[Ground Truth JSON]
+graph TD;
+    subgraph Inputs;
+    Config[Configuration JSON];
+    Audio[Audio Files];
+    GT[Ground Truth JSON];
     end
 
-    subgraph "Evaluation Process"
-    Evaluator[Evaluator]
-    API[Transcription APIs]
-    Norm[Normalization]
-    Stats[Error Calculation]
+    subgraph "Evaluation Process";
+    Evaluator[Evaluator];
+    API[Transcription APIs];
+    Norm[Normalization];
+    Stats[Error Calculation];
     end
 
-    subgraph Outputs
-    Transcript[Transcript JSON]
-    StatFile[Stats JSON]
-    Report[Excel Report]
+    subgraph Outputs;
+    Transcript[Transcript JSON];
+    StatFile[Stats JSON];
+    Report[Excel Report];
     end
 
-    Config --> Evaluator
-    Audio --> Evaluator
-    GT --> Stats
+    Config --> Evaluator;
+    Audio --> Evaluator;
+    GT --> Stats;
 
-    Evaluator -- "1. Transcribe" --> API
-    API --> Norm
-    Norm --> Transcript
-    Transcript -- "2. Compare" --> Stats
-    Stats --> StatFile
-    StatFile -- "3. Aggregate" --> Report
+    Evaluator -- "1. Transcribe" --> API;
+    API --> Norm;
+    Norm --> Transcript;
+    Transcript -- "2. Compare" --> Stats;
+    Stats --> StatFile;
+    StatFile -- "3. Aggregate" --> Report;
 ```
 
 ## Project Structure
