@@ -15,10 +15,6 @@ A framework for evaluating audio transcription models (STT/ASR) accuracy and per
 ## Workflow
 
 ```mermaid
----
-config:
-  theme: base
----
 graph TD
     subgraph Inputs
     Config[Configuration JSON]
