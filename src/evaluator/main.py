@@ -10,7 +10,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from evaluator import Evaluator
+from .evaluator import Evaluator
 from evaluator_types import GlobalContext, RuntimePaths
 
 # Ensure the src/evaluator directory is in the python path
