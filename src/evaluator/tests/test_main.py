@@ -18,9 +18,6 @@ def test_setup_paths_with_template(tmp_path):
         }
     }
 
-    # We mock os.path.abspath to behave predictably relative to tmp_path for the config dir
-    # But setup_paths uses os.path.dirname(os.path.abspath(config_path))
-
     paths = setup_paths(str(config_file), config)
 
     assert isinstance(paths, RuntimePaths)

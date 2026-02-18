@@ -150,8 +150,8 @@ def main():
             paths=paths
         )
 
-        evaluator = EvaluationRunner(global_context)
-        evaluator.run()
+        evaluation_runner = EvaluationRunner(global_context)
+        evaluation_runner.run()
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Exception in main: %s", e)
