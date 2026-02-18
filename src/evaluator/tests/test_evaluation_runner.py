@@ -1,12 +1,12 @@
 """
-Unit tests for the Evaluator class.
+Unit tests for the EvaluationRunner class.
 """
 import os
 from unittest.mock import MagicMock
 # file: snyk-ignore python/HardcodedNonCryptoSecret/test
 import pytest
-from evaluator_types import GlobalContext, RuntimePaths
-from evaluator import Evaluator
+from evaluation_runner_types import GlobalContext, RuntimePaths
+from evaluation_runner import EvaluationRunner
 
 
 @pytest.fixture
@@ -24,53 +24,53 @@ def mock_global_context():
     return GlobalContext(args=mock_args, config=mock_config, paths=paths)
 
 
-class TestEvaluator:
-    """Tests for the Evaluator class."""
+class TestEvaluationRunner:
+    """Tests for the EvaluationRunner class."""
     # pylint: disable=protected-access, redefined-outer-name
 
     def test_generate_output_stem(self, mock_global_context):
         """Test _generate_output_stem method."""
-        evaluator = Evaluator(mock_global_context)
-        stem = evaluator._generate_output_stem(  # pylint: disable=protected-access
+        evaluation_runner = EvaluationRunner(mock_global_context)
+        stem = evaluation_runner._generate_output_stem(  # pylint: disable=protected-access
             "model", "label", "audio.mp3")
         assert stem == "model-label-audio"
 
-        stem = evaluator._generate_output_stem(  # pylint: disable=protected-access
+        stem = evaluation_runner._generate_output_stem(  # pylint: disable=protected-access
             "model", None, "audio.mp3")
         assert stem == "model-audio"
 
     def test_generate_stats_filename(self, mock_global_context):
         """Test _generate_stats_filename method."""
-        evaluator = Evaluator(mock_global_context)
-        filename = evaluator._generate_stats_filename(  # pylint: disable=protected-access
+        evaluation_runner = EvaluationRunner(mock_global_context)
+        filename = evaluation_runner._generate_stats_filename(  # pylint: disable=protected-access
             "stem")
         assert filename == "stem-stats.json"
 
     def test_generate_transcript_filename(self, mock_global_context):
         """Test _generate_transcript_filename method."""
-        evaluator = Evaluator(mock_global_context)
-        filename = evaluator._generate_transcript_filename(  # pylint: disable=protected-access
+        evaluation_runner = EvaluationRunner(mock_global_context)
+        filename = evaluation_runner._generate_transcript_filename(  # pylint: disable=protected-access
             "stem")
         assert filename == "stem-transcript.json"
 
     def test_validate_safe_path_valid(self, mock_global_context):
         """Test _validate_safe_path with a valid path."""
-        evaluator = Evaluator(mock_global_context)
+        evaluation_runner = EvaluationRunner(mock_global_context)
         base = os.path.abspath("base")
         file_path = "subdir/file.txt"
 
         # Should return joined path
         expected = os.path.abspath(os.path.join(base, file_path))
-        result = evaluator._validate_safe_path(  # pylint: disable=protected-access
+        result = evaluation_runner._validate_safe_path(  # pylint: disable=protected-access
             base, file_path)
         assert result == expected
 
     def test_validate_safe_path_traversal(self, mock_global_context):
         """Test _validate_safe_path detects traversal attempts."""
-        evaluator = Evaluator(mock_global_context)
+        evaluation_runner = EvaluationRunner(mock_global_context)
         base = os.path.abspath("base")
         file_path = "../outside.txt"
 
         with pytest.raises(ValueError, match="Path traversal attempt detected"):
-            evaluator._validate_safe_path(
+            evaluation_runner._validate_safe_path(
                 base, file_path)  # pylint: disable=protected-access

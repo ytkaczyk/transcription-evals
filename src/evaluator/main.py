@@ -8,8 +8,8 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
-from evaluator import Evaluator
-from evaluator_types import GlobalContext, RuntimePaths
+from evaluation_runner import EvaluationRunner
+from evaluation_runner_types import GlobalContext, RuntimePaths
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -150,8 +150,8 @@ def main():
             paths=paths
         )
 
-        evaluator = Evaluator(global_context)
-        evaluator.run()
+        evaluation_runner = EvaluationRunner(global_context)
+        evaluation_runner.run()
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Exception in main: %s", e)

@@ -12,12 +12,12 @@ import jiwer
 import jiwer.transforms
 from report_generator import generate_excel_report
 from transcribers.transcriber_factory import TranscriberFactory
-from evaluator_types import EvaluationContext, GlobalContext
+from evaluation_runner_types import EvaluationContext, GlobalContext
 
 logger = logging.getLogger(__name__)
 
 
-class Evaluator:
+class EvaluationRunner:
     """
     Orchestrates the evaluation process for audio transcription models.
     """
