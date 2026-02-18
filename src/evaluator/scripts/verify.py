@@ -28,7 +28,7 @@ def main():
     # We target the current directory packages
     # Using the flags recommended in instructions: --disable=C0301 (line too long)
     run_command(["uv", "run", "pylint", "--disable=C0301",
-                "transcribers", "evaluator.py", "main.py", "tests"], "pylint")
+                "transcribers", "evaluation_runner.py", "main.py", "tests"], "pylint")
 
     # 3. Run Pyright
     run_command(["uv", "run", "pyright", "."], "pyright")
