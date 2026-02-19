@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from pyfiglet import figlet_format
-from rich.console import Group
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -23,6 +23,8 @@ from evaluation_runner_types import GlobalContext, RuntimePaths
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+console = Console()
 
 # Configure logging
 logging.basicConfig(
@@ -297,6 +299,9 @@ def main():
 
         paths = setup_paths(args.config_file, config)
         logger.debug("Paths set up: %s", paths)
+
+        console.print(_build_banner_renderable(args))
+        console.print(_build_directories_panel(paths))
 
         EvaluatorApp(args, config, paths).run()
 

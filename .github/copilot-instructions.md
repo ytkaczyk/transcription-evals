@@ -34,6 +34,49 @@ This project evaluates audio transcription models (STT/ASR). It is a Python-base
   - Fix any issues revealed by the verification script before proceeding.
 
 
+## UI patterns (Textual + Rich)
+
+The application uses **Textual** for the TUI (built on Rich). The following patterns are established and must be followed for all new panels, progress bars, and widgets.
+
+### Dual-render pattern for persistent output
+Textual runs in the terminal's **alternate screen buffer**. When the app exits, the primary buffer is restored. To make content visible **both during the run and after exit**:
+
+1. **Print to primary buffer** via `console.print(renderable)` *before* `EvaluatorApp(...).run()` — this output persists after Textual exits.
+2. **Mount the same renderable as a `Static` widget** inside `compose()` — this makes it visible while the app is running.
+
+```python
+# In main() — prints to primary buffer (survives app exit)
+console.print(_build_banner_renderable(args))
+console.print(_build_directories_panel(paths))
+EvaluatorApp(args, config, paths).run()
+
+# In EvaluatorApp.compose() — shown while app runs
+with VerticalScroll(id="main-content"):
+    yield Static(_build_banner_renderable(self._args))
+    yield Static(_build_directories_panel(self._paths))
+yield RichLog(id="log-panel", auto_scroll=True, markup=True)
+```
+
+This is the **correct pattern for all future panels and progress bars** that should remain visible after the run.
+
+### Log panel
+- `RichLog` widget docked to the bottom (7 lines, `dock: bottom`)
+- Log records forwarded via `RichLogHandler(logging.Handler)` using `app.call_from_thread(log_widget.write, msg)` — safe from both the event loop thread and `asyncio.to_thread` pool threads
+- All `StreamHandler` instances are stripped from the root logger inside `_setup_logging()` before Textual starts, to prevent garbled output
+
+### Worker pattern
+- `EvaluationRunner.run()` is `async` — blocking I/O calls are wrapped with `asyncio.to_thread()` to keep the event loop free
+- The Textual worker uses `@work` (asyncio coroutine worker, not `thread=True`) and calls `self.exit()` in a `finally` block to always return the shell prompt
+
+### Color theme
+- Borders/paths: `blue`
+- Labels/panel titles: `bold magenta`
+- Panel title accents: `bold hot_pink`
+- Banner art: `bold blue`
+- Subtitle: `bold magenta`
+- Lazy transcription enabled: `bold green` / disabled: `bold yellow`
+
+
 ## Example: Transcriber Implementation
 ```python
 class MyServiceTranscriber(AbstractTranscriber):
