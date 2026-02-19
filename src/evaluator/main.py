@@ -10,17 +10,19 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from pyfiglet import figlet_format
-from rich.console import Console, Group
+from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from textual.app import App, ComposeResult
+from textual.containers import VerticalScroll
+from textual.widgets import RichLog, Static
+from textual import work
 from evaluation_runner import EvaluationRunner
 from evaluation_runner_types import GlobalContext, RuntimePaths
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-console = Console()
 
 # Configure logging
 logging.basicConfig(
@@ -125,7 +127,7 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
         raise
 
 
-def _print_banner(args: argparse.Namespace) -> None:
+def _build_banner_renderable(args: argparse.Namespace) -> Panel:
     art = figlet_format("Transcription\n    Evals", font="standard")
     title_text = Text(art, style="bold blue")
     title_text.append("  Audio Model Evaluator\n", style="bold magenta")
@@ -140,11 +142,11 @@ def _print_banner(args: argparse.Namespace) -> None:
     info_table.add_row("Lazy transcription", lazy_status)
 
     content = Group(title_text, info_table)
-    console.print(Panel(content, border_style="magenta",
-                  title="[bold hot_pink]Transcription Evals[/bold hot_pink]"))
+    return Panel(content, border_style="magenta",
+                 title="[bold hot_pink]Transcription Evals[/bold hot_pink]")
 
 
-def _print_directories_panel(paths: RuntimePaths) -> None:
+def _build_directories_panel(paths: RuntimePaths) -> Panel:
     table = Table.grid(padding=(0, 2))
     table.add_column(style="bold magenta", min_width=20)
     table.add_column(style="blue")
@@ -154,8 +156,8 @@ def _print_directories_panel(paths: RuntimePaths) -> None:
     table.add_row("Outputs", paths.outputs_dir)
     if paths.excel_report_template:
         table.add_row("Excel template", paths.excel_report_template)
-    console.print(Panel(table, border_style="blue",
-                  title="[bold magenta]Directories[/bold magenta]"))
+    return Panel(table, border_style="blue",
+                 title="[bold magenta]Directories[/bold magenta]")
 
 
 def _setup_logging(config_file: Path) -> None:
@@ -179,20 +181,92 @@ def _setup_logging(config_file: Path) -> None:
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 
-    # Keep existing console handlers at INFO to avoid terminal noise
-    for handler in root_logger.handlers:
-        if isinstance(handler, logging.StreamHandler):
-            handler.setLevel(logging.INFO)
-
     file_handler = logging.FileHandler(log_filepath, encoding="utf-8")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(
         logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     )
+    # Strip console StreamHandlers — Textual owns the terminal from here on
+    root_logger.handlers = [
+        h for h in root_logger.handlers
+        if not isinstance(h, logging.StreamHandler)
+    ]
     root_logger.addHandler(file_handler)
 
     logger.debug("File logging initialised: %s", log_filepath)
+
+
+class RichLogHandler(logging.Handler):
+    """Forwards log records to the Textual RichLog widget."""
+
+    def __init__(self, app: "EvaluatorApp") -> None:
+        super().__init__()
+        self.app = app
+        self.setFormatter(
+            logging.Formatter(
+                "%(asctime)s [%(levelname)s] %(message)s", "%H:%M:%S")
+        )
+
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = self.format(record)
+        try:
+            log_widget = self.app.query_one("#log-panel", RichLog)
+            self.app.call_from_thread(log_widget.write, msg)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
+
+class EvaluatorApp(App):
+    """Textual TUI for the audio model evaluator."""
+
+    CSS = """
+    #log-panel {
+        dock: bottom;
+        height: 7;
+        border-top: solid blue;
+        background: $surface;
+    }
+    #main-content {
+        height: 1fr;
+    }
+    """
+
+    def __init__(
+        self,
+        args: argparse.Namespace,
+        config: dict,
+        paths: RuntimePaths,
+    ) -> None:
+        super().__init__()
+        self._args = args
+        self._config = config
+        self._paths = paths
+
+    def compose(self) -> ComposeResult:
+        """Build the widget layout: scrollable main area + fixed log panel."""
+        with VerticalScroll(id="main-content"):
+            yield Static(_build_banner_renderable(self._args))
+            yield Static(_build_directories_panel(self._paths))
+        yield RichLog(id="log-panel", auto_scroll=True, markup=True)
+
+    def on_ready(self) -> None:
+        """Wire up the log handler and start the evaluation worker."""
+        logging.getLogger().addHandler(RichLogHandler(self))
+        self._run_evaluation()
+
+    @work
+    async def _run_evaluation(self) -> None:
+        """Run EvaluationRunner in an async Textual worker; exit when done."""
+        try:
+            global_context = GlobalContext(
+                args=self._args, config=self._config, paths=self._paths
+            )
+            await EvaluationRunner(global_context).run()
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logger.error("Evaluation failed: %s", exc)
+        finally:
+            self.exit()
 
 
 def main():
@@ -210,7 +284,6 @@ def main():
             "--lazy-transcription", action="store_true", default=False,
             help="Skip transcription if the output file already exists")
         args = parser.parse_args()
-        _print_banner(args)
 
         if not os.path.isfile(args.config_file):
             logger.error("Configuration file not found: %s", args.config_file)
@@ -224,16 +297,8 @@ def main():
 
         paths = setup_paths(args.config_file, config)
         logger.debug("Paths set up: %s", paths)
-        _print_directories_panel(paths)
 
-        global_context = GlobalContext(
-            args=args,
-            config=config,
-            paths=paths
-        )
-
-        evaluation_runner = EvaluationRunner(global_context)
-        evaluation_runner.run()
+        EvaluatorApp(args, config, paths).run()
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Exception in main: %s", e)

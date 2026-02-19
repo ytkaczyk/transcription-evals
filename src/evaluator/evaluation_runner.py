@@ -1,6 +1,7 @@
 """
 Evaluator module that handles the core logic of the audio model evaluation process.
 """
+import asyncio
 import json
 import logging
 import os
@@ -26,7 +27,7 @@ class EvaluationRunner:
     def __init__(self, global_context: GlobalContext):
         self.global_context = global_context
 
-    def run(self):
+    async def run(self):
         """
         Runs the evaluation loop: Model -> Input -> Transcribe -> Save.
         """
@@ -62,8 +63,8 @@ class EvaluationRunner:
                     output_stem=output_stem,
                 )
 
-                transcript_path = self._transcribe_audio_file(
-                    transcriber, evaluation_context
+                transcript_path = await asyncio.to_thread(
+                    self._transcribe_audio_file, transcriber, evaluation_context
                 )
 
                 evaluation_context.transcript_path = transcript_path
@@ -72,11 +73,14 @@ class EvaluationRunner:
                     "Transcript saved to: %s", evaluation_context.transcript_path
                 )
 
-                stats_path = self._compute_stats(evaluation_context)
+                stats_path = await asyncio.to_thread(
+                    self._compute_stats, evaluation_context
+                )
 
                 evaluation_context.stats_path = stats_path
 
-        generate_excel_report(
+        await asyncio.to_thread(
+            generate_excel_report,
             config_path=self.global_context.args.config_file,
             outputs_dir=self.global_context.paths.outputs_dir,
             eval_dir=self.global_context.paths.eval_dir,
