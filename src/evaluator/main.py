@@ -9,11 +9,18 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
+from pyfiglet import figlet_format
+from rich.console import Console, Group
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 from evaluation_runner import EvaluationRunner
 from evaluation_runner_types import GlobalContext, RuntimePaths
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+console = Console()
 
 # Configure logging
 logging.basicConfig(
@@ -38,7 +45,7 @@ def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str,
     # run_outputs_dir_name = f"{config_filename}-{timestamp}"
     eval_dir_name = f"{config_filename}"
 
-    logger.info("Run Eval Directory Name: %s", eval_dir_name)
+    logger.debug("Run Eval Directory Name: %s", eval_dir_name)
 
     run_eval_path = os.path.join(outputs_base_path, eval_dir_name)
 
@@ -51,8 +58,8 @@ def _create_run_dirs(outputs_base_path: str, config_filename: str) -> tuple[str,
     os.makedirs(intermediate_dir, exist_ok=True)
     os.makedirs(outputs_dir, exist_ok=True)
 
-    logger.info("Created subdirectory: %s", intermediate_dir)
-    logger.info("Created subdirectory: %s", outputs_dir)
+    logger.debug("Created subdirectory: %s", intermediate_dir)
+    logger.debug("Created subdirectory: %s", outputs_dir)
 
     return intermediate_dir, outputs_dir, run_eval_path
 
@@ -79,8 +86,8 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
         # Get the directory of the configuration file
         config_dir = os.path.dirname(os.path.abspath(config_path))
 
-        logger.info("Current Directory: %s", os.getcwd())
-        logger.info("Config Directory: %s", config_dir)
+        logger.debug("Current Directory: %s", os.getcwd())
+        logger.debug("Config Directory: %s", config_dir)
 
         # Resolve input and output paths relative to the location of the json file
         paths_config = config.get("paths", {})
@@ -96,10 +103,10 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
             excel_report_template = _resolve_config_path(
                 config_dir, template_rel_path)
 
-        logger.info("Inputs Path: %s", inputs_path)
-        logger.info("Outputs Path: %s", outputs_path)
+        logger.debug("Inputs Path: %s", inputs_path)
+        logger.debug("Outputs Path: %s", outputs_path)
         if excel_report_template:
-            logger.info("Excel Report Template: %s", excel_report_template)
+            logger.debug("Excel Report Template: %s", excel_report_template)
 
         # Create output directory: <filename>
         intermediate_dir, outputs_dir, eval_dir = _create_run_dirs(
@@ -116,6 +123,39 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
     except Exception as e:
         logger.error("Error setting up directories: %s", e)
         raise
+
+
+def _print_banner(args: argparse.Namespace) -> None:
+    art = figlet_format("Transcription\n    Evals", font="standard")
+    title_text = Text(art, style="bold blue")
+    title_text.append("  Audio Model Evaluator\n", style="bold magenta")
+
+    config_abs = os.path.abspath(args.config_file)
+    lazy_status = "✅ [bold green]Enabled[/bold green]" if args.lazy_transcription else "[bold yellow]Disabled[/bold yellow]"
+
+    info_table = Table.grid(padding=(0, 2))
+    info_table.add_column(style="bold magenta")
+    info_table.add_column(style="blue")
+    info_table.add_row("Config file", config_abs)
+    info_table.add_row("Lazy transcription", lazy_status)
+
+    content = Group(title_text, info_table)
+    console.print(Panel(content, border_style="magenta",
+                  title="[bold hot_pink]Transcription Evals[/bold hot_pink]"))
+
+
+def _print_directories_panel(paths: RuntimePaths) -> None:
+    table = Table.grid(padding=(0, 2))
+    table.add_column(style="bold magenta", min_width=20)
+    table.add_column(style="blue")
+    table.add_row("Inputs", paths.inputs_dir)
+    table.add_row("Eval root", paths.eval_dir)
+    table.add_row("Intermediate", paths.intermediate_dir)
+    table.add_row("Outputs", paths.outputs_dir)
+    if paths.excel_report_template:
+        table.add_row("Excel template", paths.excel_report_template)
+    console.print(Panel(table, border_style="blue",
+                  title="[bold magenta]Directories[/bold magenta]"))
 
 
 def _setup_logging(config_file: Path) -> None:
@@ -170,6 +210,7 @@ def main():
             "--lazy-transcription", action="store_true", default=False,
             help="Skip transcription if the output file already exists")
         args = parser.parse_args()
+        _print_banner(args)
 
         if not os.path.isfile(args.config_file):
             logger.error("Configuration file not found: %s", args.config_file)
@@ -182,7 +223,8 @@ def main():
         config = json.loads(config_text)
 
         paths = setup_paths(args.config_file, config)
-        logger.info("Paths set up: %s", paths)
+        logger.debug("Paths set up: %s", paths)
+        _print_directories_panel(paths)
 
         global_context = GlobalContext(
             args=args,
