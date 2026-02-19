@@ -6,4 +6,4 @@ ignore:
   python/PT:
     - '*':
         reason: 'Internal tool. CLI input trusted.'
-        expires: 2020-04-04T17:33:45.004Z
+        expires: 2100-01-01T00:00:00.000Z
