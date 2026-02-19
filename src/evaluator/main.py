@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from evaluation_runner import EvaluationRunner
@@ -117,6 +118,43 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
         raise
 
 
+def _setup_logging(config_file: Path) -> None:
+    """
+    Configures file logging for the current run.
+
+    Creates a 'logs' directory beside the config file and writes a DEBUG-level
+    log file named '<config_file_stem>-<yyyymmdd-hhmmss>.log'. The existing
+    console handler (set up by basicConfig) is kept at INFO level.
+
+    Args:
+        config_file (Path): Path to the JSON configuration file.
+    """
+    config_path = config_file
+    logs_dir = Path(config_path.parent, "logs")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    log_filename = f"{config_path.stem}-{datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
+    log_filepath = logs_dir / log_filename
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+
+    # Keep existing console handlers at INFO to avoid terminal noise
+    for handler in root_logger.handlers:
+        if isinstance(handler, logging.StreamHandler):
+            handler.setLevel(logging.INFO)
+
+    file_handler = logging.FileHandler(log_filepath, encoding="utf-8")
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(
+        logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    )
+    root_logger.addHandler(file_handler)
+
+    logger.debug("File logging initialised: %s", log_filepath)
+
+
 def main():
     """
     Main function to run the evaluator.
@@ -136,6 +174,8 @@ def main():
         if not os.path.isfile(args.config_file):
             logger.error("Configuration file not found: %s", args.config_file)
             sys.exit(1)
+
+        _setup_logging(Path(args.config_file))
 
         # file: snyk-ignore python/PT
         config_text = Path(args.config_file).read_text(encoding='utf-8')
