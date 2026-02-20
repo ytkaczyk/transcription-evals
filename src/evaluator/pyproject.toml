@@ -15,6 +15,7 @@ dependencies = [
     "rich>=14.3.3",
     "pyfiglet>=1.0.4",
     "textual>=8.0.0",
+    "mutagen>=1.47.0",
 ]
 
 [dependency-groups]

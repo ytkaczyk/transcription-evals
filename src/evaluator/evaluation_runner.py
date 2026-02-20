@@ -11,7 +11,8 @@ from typing import List
 
 import jiwer
 import jiwer.transforms
-from report_generator import generate_excel_report
+from report_generators.excel_report_generator import generate_excel_report
+from report_generators.md_report_generator import generate_md_report
 from transcribers.transcriber_factory import TranscriberFactory
 from evaluation_runner_types import EvaluationContext, GlobalContext
 
@@ -63,12 +64,17 @@ class EvaluationRunner:
                     result,
                 )
 
-        await asyncio.to_thread(
-            generate_excel_report,
+        await generate_excel_report(
             config_path=self.global_context.args.config_file,
             outputs_dir=self.global_context.paths.outputs_dir,
             eval_dir=self.global_context.paths.eval_dir,
             template_path=self.global_context.paths.excel_report_template,
+        )
+
+        await generate_md_report(
+            config_path=self.global_context.args.config_file,
+            outputs_dir=self.global_context.paths.outputs_dir,
+            eval_dir=self.global_context.paths.eval_dir,
         )
 
     def _run_model_sync(
