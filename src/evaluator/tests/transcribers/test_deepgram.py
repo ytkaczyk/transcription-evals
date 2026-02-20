@@ -2,7 +2,6 @@
 """
 Unit tests for DeepgramTranscriber.
 """
-from typing import cast
 # pylint: disable=unused-argument
 from unittest.mock import patch, MagicMock, mock_open
 import pytest
@@ -72,7 +71,7 @@ class TestDeepgramTranscriber:
         assert transcriber.name == "Deepgram"
 
     @patch("transcribers.deepgram.open", new_callable=mock_open, read_data=b"audio_bytes")
-    def test_transcribe_success_utterances(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
+    async def test_transcribe_success_utterances(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
         """Test successful transcription with utterance results."""
         # Setup
         transcriber = DeepgramTranscriber()
@@ -89,33 +88,15 @@ class TestDeepgramTranscriber:
         mock_response.results.utterances = [u1, u2]
         mock_response.results.channels = None
 
-        # Setup client call return
-        # client.listen.v1.media.transcribe_file returns the response
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = mock_response
-
-        # Use the dummy class so the isinstance check in the code passes
         with patch("transcribers.deepgram.ListenV1Response", new=DummyListenV1Response):
-            # We don't need to patch the instance class if we use the same Dummy class
-            # But since mock_response is a MagicMock, we should probably make it look like DummyListenV1Response
-            # OR we can just return an instance of DummyListenV1Response from the mock.
-
-            # Better approach: Make the mock return an actual DummyListenV1Response instance
-            # configured with our mock data.
-            # But since we already set up mock_response as a MagicMock with children,
-            # let's just cheat and say it is an instance of DummyListenV1Response
-            # IF that works. MagicMock.__class__ assignment works.
-
-            # Since we are essentially replacing the Class the code checks against,
-            # we need mock_response to satisfy isinstance(mock_response, DummyListenV1Response)
-
-            # Let's create a real object instead of MagicMock for the response to be cleaner
-            # Re-create mock_response as DummyListenV1Response
             real_mock_response = DummyListenV1Response()
             real_mock_response.metadata = mock_response.metadata
             real_mock_response.results = mock_response.results
-            cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = real_mock_response
+            transcriber.client.listen.v1.media.transcribe_file = MagicMock(
+                return_value=real_mock_response
+            )
 
-            result = transcriber.transcribe("test.mp3")
+            result = await transcriber.transcribe("test.mp3")
 
         # Verify
         assert isinstance(result, TranscriptResult)
@@ -134,17 +115,15 @@ class TestDeepgramTranscriber:
         assert item2.content == "World"
 
         # Verify call arguments
-        # pylint: disable=no-member
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).assert_called_once()
-        call_kwargs = cast(
-            MagicMock, transcriber.client.listen.v1.media.transcribe_file).call_args[1]
+        transcriber.client.listen.v1.media.transcribe_file.assert_called_once()
+        call_kwargs = transcriber.client.listen.v1.media.transcribe_file.call_args[1]
         assert call_kwargs['request'] == b"audio_bytes"
         assert call_kwargs['model'] == "nova-3"
         assert call_kwargs['smart_format'] is True
         assert call_kwargs['diarize'] is True
 
     @patch("transcribers.deepgram.open", new_callable=mock_open, read_data=b"audio_bytes")
-    def test_transcribe_success_channels(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
+    async def test_transcribe_success_channels(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
         """Test successful transcription fallback to channels."""
         transcriber = DeepgramTranscriber()
 
@@ -158,16 +137,15 @@ class TestDeepgramTranscriber:
         channel = MagicMock(alternatives=[alt])
         mock_response.results.channels = [channel]
 
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = mock_response
-
         with patch("transcribers.deepgram.ListenV1Response", new=DummyListenV1Response):
-            # Create real object wrapper
             real_mock_response = DummyListenV1Response()
             real_mock_response.metadata = mock_response.metadata
             real_mock_response.results = mock_response.results
-            cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = real_mock_response
+            transcriber.client.listen.v1.media.transcribe_file = MagicMock(
+                return_value=real_mock_response
+            )
 
-            result = transcriber.transcribe("test.mp3")
+            result = await transcriber.transcribe("test.mp3")
 
         assert len(result.conversation) == 1
         assert result.conversation[0].content == "Fallback text"
@@ -175,7 +153,7 @@ class TestDeepgramTranscriber:
         assert result.conversation[0].person == "Unknown"
 
     @patch("transcribers.deepgram.open", new_callable=mock_open, read_data=b"")
-    def test_transcribe_handles_none_values(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
+    async def test_transcribe_handles_none_values(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
         """Test logic robust against None values in external API response."""
         transcriber = DeepgramTranscriber()
 
@@ -187,16 +165,15 @@ class TestDeepgramTranscriber:
         mock_response.results.utterances = [u1]
         mock_response.results.channels = None
 
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = mock_response
-
         with patch("transcribers.deepgram.ListenV1Response", new=DummyListenV1Response):
-            # Create real object wrapper
             real_mock_response = DummyListenV1Response()
             real_mock_response.metadata = mock_response.metadata
             real_mock_response.results = mock_response.results
-            cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = real_mock_response
+            transcriber.client.listen.v1.media.transcribe_file = MagicMock(
+                return_value=real_mock_response
+            )
 
-            result = transcriber.transcribe("test.mp3")
+            result = await transcriber.transcribe("test.mp3")
 
         assert result.duration == 0.0
         assert len(result.conversation) == 1
@@ -205,43 +182,46 @@ class TestDeepgramTranscriber:
         assert result.conversation[0].content == ""
 
     @patch("transcribers.deepgram.open", new_callable=mock_open, read_data=b"")
-    def test_transcribe_unexpected_response_type(self, mock_file, mock_env_api_key, mock_deepgram_client_cls, caplog):
+    async def test_transcribe_unexpected_response_type(self, mock_file, mock_env_api_key, mock_deepgram_client_cls, caplog):
         """Test handling of unexpected response type from SDK."""
         transcriber = DeepgramTranscriber()
 
         # Return something that is NOT an instance of ListenV1Response
         mock_response = MagicMock()
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = mock_response
 
         # Use DummyListenV1Response to mock the class in the module
         with patch("transcribers.deepgram.ListenV1Response", new=DummyListenV1Response):
             # mock_response is a MagicMock, not instance of DummyListenV1Response
-            result = transcriber.transcribe("test.mp3")
+            transcriber.client.listen.v1.media.transcribe_file = MagicMock(
+                return_value=mock_response
+            )
+            result = await transcriber.transcribe("test.mp3")
 
         assert len(result.conversation) == 0
         assert "Deepgram returned unexpected response type" in caplog.text
 
     @patch("transcribers.deepgram.open")
-    def test_transcribe_file_error(self, mock_open_func, mock_env_api_key, mock_deepgram_client_cls):
+    async def test_transcribe_file_error(self, mock_open_func, mock_env_api_key, mock_deepgram_client_cls):
         """Test file reading error propagation."""
         mock_open_func.side_effect = IOError("File not found")
         transcriber = DeepgramTranscriber()
 
         with pytest.raises(IOError):
-            transcriber.transcribe("nonexistent.mp3")
+            await transcriber.transcribe("nonexistent.mp3")
 
-    def test_transcribe_api_error(self, mock_env_api_key, mock_deepgram_client_cls):
+    async def test_transcribe_api_error(self, mock_env_api_key, mock_deepgram_client_cls):
         """Test API error propagation."""
         with patch("transcribers.deepgram.open", new_callable=mock_open, read_data=b"data"):
             transcriber = DeepgramTranscriber()
-            cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).side_effect = Exception(
-                "API Error")
+            transcriber.client.listen.v1.media.transcribe_file = MagicMock(
+                side_effect=Exception("API Error")
+            )
 
             with pytest.raises(Exception, match="API Error"):
-                transcriber.transcribe("test.mp3")
+                await transcriber.transcribe("test.mp3")
 
     @patch("transcribers.deepgram.open", new_callable=mock_open, read_data=b"audio_bytes")
-    def test_transcribe_with_options(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
+    async def test_transcribe_with_options(self, mock_file, mock_env_api_key, mock_deepgram_client_cls):
         """Test transcribe with custom options."""
         transcriber = DeepgramTranscriber()
 
@@ -250,23 +230,20 @@ class TestDeepgramTranscriber:
         mock_response.results.utterances = []
         mock_response.results.channels = []
 
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = mock_response
-
         with patch("transcribers.deepgram.ListenV1Response", new=DummyListenV1Response):
-            # Create real object wrapper
             real_mock_response = DummyListenV1Response()
             real_mock_response.metadata = mock_response.metadata
             real_mock_response.results = mock_response.results
-            cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).return_value = real_mock_response
+            transcriber.client.listen.v1.media.transcribe_file = MagicMock(
+                return_value=real_mock_response
+            )
 
             custom_options = {"model": "nova-2", "language": "es"}
-            transcriber.transcribe("test.mp3", options=custom_options)
+            await transcriber.transcribe("test.mp3", options=custom_options)
 
         # Verify call arguments
-        # pylint: disable=no-member
-        cast(MagicMock, transcriber.client.listen.v1.media.transcribe_file).assert_called_once()
-        call_kwargs = cast(
-            MagicMock, transcriber.client.listen.v1.media.transcribe_file).call_args[1]
+        transcriber.client.listen.v1.media.transcribe_file.assert_called_once()
+        call_kwargs = transcriber.client.listen.v1.media.transcribe_file.call_args[1]
         assert call_kwargs['model'] == "nova-2"
         assert call_kwargs['language'] == "es"
         # Default should remain if not overridden

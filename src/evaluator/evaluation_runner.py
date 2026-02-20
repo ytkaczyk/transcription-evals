@@ -30,16 +30,17 @@ class EvaluationRunner:
     async def run(self):
         """
         Runs the evaluation loop: Model -> Input -> Transcribe -> Save.
+        Models are processed concurrently; inputs within each model are sequential.
         """
         models = self.global_context.config.get("models", [])
         inputs = self.global_context.config.get("inputs", [])
 
+        model_tasks = []
+        active_model_configs = []
         for model_config in models:
             model_name = model_config.get("name")
             if not model_name:
                 continue
-
-            label = model_config.get("label", None)
 
             # Create transcriber for each model
             try:
@@ -48,36 +49,19 @@ class EvaluationRunner:
                 logger.error(e)
                 continue
 
-            for input_item in inputs:
-                audio_file = input_item.get("audio")
-                if not audio_file:
-                    continue
+            model_tasks.append(asyncio.to_thread(
+                self._run_model_sync, transcriber, model_config, inputs
+            ))
+            active_model_configs.append(model_config)
 
-                output_stem = self._generate_output_stem(
-                    model_name, label, audio_file
+        results = await asyncio.gather(*model_tasks, return_exceptions=True)
+        for model_config, result in zip(active_model_configs, results):
+            if isinstance(result, BaseException):
+                logger.error(
+                    "Model '%s' failed: %s",
+                    model_config.get("name"),
+                    result,
                 )
-
-                evaluation_context = EvaluationContext(
-                    model=model_config,
-                    input=input_item,
-                    output_stem=output_stem,
-                )
-
-                transcript_path = await asyncio.to_thread(
-                    self._transcribe_audio_file, transcriber, evaluation_context
-                )
-
-                evaluation_context.transcript_path = transcript_path
-
-                logger.info(
-                    "Transcript saved to: %s", evaluation_context.transcript_path
-                )
-
-                stats_path = await asyncio.to_thread(
-                    self._compute_stats, evaluation_context
-                )
-
-                evaluation_context.stats_path = stats_path
 
         await asyncio.to_thread(
             generate_excel_report,
@@ -86,6 +70,63 @@ class EvaluationRunner:
             eval_dir=self.global_context.paths.eval_dir,
             template_path=self.global_context.paths.excel_report_template,
         )
+
+    def _run_model_sync(
+        self, transcriber, model_config: dict, inputs: list
+    ) -> None:
+        """
+        Processes all inputs for a single model sequentially, running entirely in a
+        dedicated worker thread so the event loop is never blocked during I/O or
+        CPU-intensive stats computation. This eliminates Windows IocpProactor
+        contention when multiple models run concurrently.
+        """
+        model_name = model_config.get("name")
+        if not model_name:
+            return
+        label = model_config.get("label", None)
+
+        for input_item in inputs:
+            audio_file = input_item.get("audio")
+            if not audio_file:
+                continue
+
+            output_stem = self._generate_output_stem(
+                model_name, label, audio_file)
+
+            evaluation_context = EvaluationContext(
+                model=model_config,
+                input=input_item,
+                output_stem=output_stem,
+            )
+
+            try:
+                transcript_path = self._transcribe_audio_file_sync(
+                    transcriber, evaluation_context
+                )
+                evaluation_context.transcript_path = transcript_path
+
+                logger.info(
+                    "Transcript saved to: %s", evaluation_context.transcript_path
+                )
+
+                stats_path = self._sync_compute_stats(evaluation_context)
+                evaluation_context.stats_path = stats_path
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error(
+                    "Failed processing '%s' with model '%s': %s",
+                    audio_file,
+                    model_name,
+                    e,
+                )
+                continue
+
+    async def _run_model(
+        self, transcriber, model_config: dict, inputs: list
+    ) -> None:
+        """
+        Async compatibility shim — delegates to _run_model_sync via asyncio.to_thread.
+        """
+        await asyncio.to_thread(self._run_model_sync, transcriber, model_config, inputs)
 
     def _generate_output_stem(
         self, model_name: str, label: str | None, audio_file: str
@@ -104,10 +145,10 @@ class EvaluationRunner:
     def _generate_single_string(self, text: List[List[str]]) -> str:
         return " ".join([" ".join(word) for word in text])
 
-    def _transcribe_audio_file(
+    def _transcribe_audio_file_sync(
         self, transcriber, evaluation_context: EvaluationContext
     ) -> str:
-        # Generate output file name and path and skip the process if the file exists and lazy_transcription is True
+        """Synchronous transcription orchestration — called from within a worker thread."""
         output_stem = evaluation_context.output_stem
         model_config = evaluation_context.model
         input_item = evaluation_context.input
@@ -140,22 +181,18 @@ class EvaluationRunner:
         )
 
         try:
-            # Validate paths to prevent traversal
             audio_full_path = self._validate_safe_path(
                 self.global_context.paths.inputs_dir, audio_file
             )
 
-            # Check input
             if not os.path.exists(audio_full_path):
                 raise FileNotFoundError(
                     f"Input file not found: {audio_full_path}")
 
-            # Transcribe
-            transcript_result = transcriber.transcribe(
+            transcript_result = transcriber.transcribe_sync(
                 audio_full_path, options=model_config.get("options", {})
             )
 
-            # Save
             with open(transcript_path, "w", encoding="utf-8") as f:
                 json.dump(asdict(transcript_result), f,
                           indent=2, ensure_ascii=False)
@@ -168,6 +205,14 @@ class EvaluationRunner:
         except Exception as e:
             logger.error("Error transcribing %s: %s", audio_file, e)
             raise
+
+    async def _transcribe_audio_file(
+        self, transcriber, evaluation_context: EvaluationContext
+    ) -> str:
+        """Async compatibility shim — delegates to _transcribe_audio_file_sync via asyncio.to_thread."""
+        return await asyncio.to_thread(
+            self._transcribe_audio_file_sync, transcriber, evaluation_context
+        )
 
     def _get_text_from_transcript_json(self, file_path: str) -> str:
         """Reads a TranscriptResult JSON and returns the full text."""
@@ -217,20 +262,39 @@ class EvaluationRunner:
                 f"Failed to read hypothesis transcript {transcript_path}: {e}"
             ) from e
 
-    def _compute_stats(self, evaluation_context: EvaluationContext) -> str:
+    def _build_stats_log_context(self, evaluation_context: EvaluationContext) -> str:
+        _label = evaluation_context.model.get("label")
+        _audio = evaluation_context.input.get("audio", "")
+        return (
+            f"{evaluation_context.model.get('name')}"
+            f"{f' [{_label}]' if _label else ''}"
+            f" | {_audio}"
+        )
+
+    def _sync_compute_stats(self, evaluation_context: EvaluationContext) -> str:
         """
-        Computes WER and CER using JiWER and saves the result to <output_stem>-stats.json
+        Synchronous stats computation body — runs in a worker thread via asyncio.to_thread.
+        Computes WER and CER using JiWER and saves the result to <output_stem>-stats.json.
         """
-        if not evaluation_context.transcript_path:
-            raise ValueError(
-                "No transcript path provided for stats computation")
+        # pylint: disable=too-many-locals
+        assert evaluation_context.transcript_path is not None, \
+            "transcript_path must be set before calling _sync_compute_stats"
+
+        _log_ctx = self._build_stats_log_context(evaluation_context)
+
+        logger.debug("%s: computing stats for transcript: %s",
+                     _log_ctx, evaluation_context.transcript_path)
 
         # Load hypothesis
+        logger.debug("%s: loading hypothesis", _log_ctx)
         hypothesis_text, hypothesis_duration = self._load_hypothesis_data(
             evaluation_context.transcript_path
         )
+        logger.debug("%s: hypothesis loaded — %.1f s, %d chars",
+                     _log_ctx, hypothesis_duration, len(hypothesis_text))
 
         # Load reference
+        logger.debug("%s: loading reference transcript", _log_ctx)
         reference_text, ref_filename = self._load_reference_text(
             evaluation_context.input
         )
@@ -238,16 +302,19 @@ class EvaluationRunner:
             raise ValueError(
                 f"Failed to load reference text from {evaluation_context.input}"
             )
+        logger.debug("%s: reference loaded — %s, %d chars",
+                     _log_ctx, ref_filename, len(reference_text))
 
-        # Compute stats
         try:
             stats_path = self._validate_safe_path(
                 self.global_context.paths.outputs_dir,
                 self._generate_stats_filename(evaluation_context.output_stem),
             )
 
+            logger.debug("%s: running jiwer.process_words", _log_ctx)
             word_output = jiwer.process_words(reference_text, hypothesis_text)
 
+            logger.debug("%s: running jiwer.process_characters", _log_ctx)
             character_output = jiwer.process_characters(
                 reference_text, hypothesis_text)
 
@@ -267,6 +334,8 @@ class EvaluationRunner:
                 ]
             )
 
+            logger.debug(
+                "%s: running normalized jiwer.process_words", _log_ctx)
             normalized_word_output = jiwer.process_words(
                 reference_text,
                 hypothesis_text,
@@ -274,11 +343,19 @@ class EvaluationRunner:
                 wer_standardize_nopunctuation_contiguous,
             )
 
+            logger.debug(
+                "%s: running normalized jiwer.process_characters", _log_ctx)
             normalized_character_output = jiwer.process_characters(
                 reference_text,
                 hypothesis_text,
                 wer_standardize_nopunctuation_contiguous,
                 wer_standardize_nopunctuation_contiguous,
+            )
+
+            logger.debug(
+                "%s: jiwer complete — WER=%.4f, CER=%.4f, norm_WER=%.4f, norm_CER=%.4f",
+                _log_ctx, word_output.wer, character_output.cer,
+                normalized_word_output.wer, normalized_character_output.cer,
             )
 
             stats = {
@@ -312,6 +389,7 @@ class EvaluationRunner:
                 json.dump(stats, f, indent=2)
 
             logger.info("Stats saved to: %s", stats_path)
+            logger.debug("%s: stats file written: %s", _log_ctx, stats_path)
             return stats_path
 
         except Exception as e:
@@ -321,6 +399,24 @@ class EvaluationRunner:
                 e,
             )
             raise
+
+    async def _compute_stats(self, evaluation_context: EvaluationContext) -> str:
+        """
+        Async compatibility shim — delegates to _sync_compute_stats via asyncio.to_thread.
+        """
+        if not evaluation_context.transcript_path:
+            raise ValueError(
+                "No transcript path provided for stats computation")
+
+        _log_ctx = self._build_stats_log_context(evaluation_context)
+
+        logger.debug("%s: scheduling stats computation in thread for: %s",
+                     _log_ctx, evaluation_context.transcript_path)
+
+        result = await asyncio.to_thread(self._sync_compute_stats, evaluation_context)
+
+        logger.debug("%s: stats computation complete: %s", _log_ctx, result)
+        return result
 
     def _validate_safe_path(self, base_dir: str, file_path: str) -> str:
         """

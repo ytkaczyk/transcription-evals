@@ -51,7 +51,8 @@ class AssemblyAITranscriber(AbstractTranscriber):
         seconds = int(seconds_total % 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-    def transcribe(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
+    def transcribe_sync(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
+        """Synchronous transcription. Called directly from worker threads or via the base-class async wrapper."""
         try:
             # Configure transcription with V3 model and speaker labels as default
             config_params = {
