@@ -21,7 +21,7 @@ from textual.containers import VerticalScroll
 from textual.widgets import RichLog, Static
 from textual import work
 from evaluation_runner import EvaluationRunner
-from evaluation_runner_types import GlobalContext, RuntimePaths
+from app_types import AppContext, RuntimePaths
 from report_generators.summary_md_report_generator import generate_summary_md_report
 
 # Ensure the src/evaluator directory is in the python path
@@ -344,10 +344,10 @@ class EvaluatorApp(App):
     async def _run_evaluation(self) -> None:
         """Run EvaluationRunner in an async Textual worker; exit when done."""
         try:
-            global_context = GlobalContext(
+            app_context = AppContext(
                 args=self._args, config=self._config, paths=self._paths
             )
-            await EvaluationRunner(global_context).run()
+            await EvaluationRunner(app_context).run()
             self._summary_markdown = await generate_summary_md_report(
                 self._args.config_file,
                 self._paths.outputs_dir,

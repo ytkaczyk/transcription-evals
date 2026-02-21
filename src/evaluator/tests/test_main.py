@@ -2,7 +2,7 @@
 Unit tests for the main module.
 """
 from main import setup_paths
-from evaluation_runner_types import RuntimePaths
+from app_types import RuntimePaths
 
 
 def test_setup_paths_with_template(tmp_path):

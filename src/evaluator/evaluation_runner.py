@@ -14,7 +14,8 @@ import jiwer.transforms
 from report_generators.excel_report_generator import generate_excel_report
 from report_generators.md_report_generator import generate_md_report
 from transcribers.transcriber_factory import TranscriberFactory
-from evaluation_runner_types import EvaluationContext, GlobalContext
+from app_types import AppContext
+from evaluation_runner_types import EvaluationContext
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,8 @@ class EvaluationRunner:
     """
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, global_context: GlobalContext):
-        self.global_context = global_context
+    def __init__(self, app_context: AppContext):
+        self.global_context = app_context
 
     async def run(self):
         """

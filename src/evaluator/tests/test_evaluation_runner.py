@@ -5,13 +5,13 @@ import os
 from unittest.mock import MagicMock
 # file: snyk-ignore python/HardcodedNonCryptoSecret/test
 import pytest
-from evaluation_runner_types import GlobalContext, RuntimePaths
+from app_types import AppContext, RuntimePaths
 from evaluation_runner import EvaluationRunner
 
 
 @pytest.fixture
 def mock_global_context():
-    """Fixture for creating a mock GlobalContext."""
+    """Fixture for creating a mock AppContext."""
     paths = RuntimePaths(
         inputs_dir=os.path.abspath("inputs"),
         intermediate_dir=os.path.abspath("intermediate"),
@@ -21,7 +21,7 @@ def mock_global_context():
     mock_args = MagicMock()
     mock_args.lazy_transcription = False
     mock_config = {"models": [], "inputs": []}
-    return GlobalContext(args=mock_args, config=mock_config, paths=paths)
+    return AppContext(args=mock_args, config=mock_config, paths=paths)
 
 
 class TestEvaluationRunner:
