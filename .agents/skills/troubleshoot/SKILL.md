@@ -26,6 +26,15 @@ Use browser automation MCP servers to diagnose and fix runtime issues through ob
 
 ## Troubleshooting Methodology
 
+### 0. Check Tool Availability
+
+**Goal**: Confirm whether browser automation tools are available.
+
+**If available**: Use the browser automation flow below.
+
+**If unavailable**: Follow the non-UI troubleshooting path (logs, CLI repro,
+and direct code inspection).
+
 ### 1. Reproduce the Issue
 
 **Goal**: Confirm the problem exists and understand the exact conditions that trigger it.
@@ -130,10 +139,31 @@ Use browser automation MCP servers to diagnose and fix runtime issues through ob
 - No regressions introduced
 
 **Quality Gates**:
-- Build succeeds (TypeScript compiles, no syntax errors)
-- Linter passes (code style, best practices)
-- Tests pass (existing functionality intact)
+- Prefer repo-provided verification scripts when present
+- For this repo, use: `uv run scripts/verify.py`
+- Otherwise run the project-appropriate build, lint, and tests
 - Manual review (code is clear and maintainable)
+
+## Non-UI Troubleshooting Path
+
+Use this path when browser automation tools are not available or when the
+problem is backend/CLI-focused.
+
+1. **Reproduce via CLI or script**
+  - Run the exact command or script the user reports
+  - Capture full stdout/stderr
+
+2. **Collect logs and traces**
+  - Inspect application logs and error stacks
+  - Identify the failing subsystem and error codes
+
+3. **Trace the code path**
+  - Search for the error message in the codebase
+  - Identify the first failing call site and inputs
+
+4. **Fix and re-run**
+  - Apply the smallest fix that addresses the root cause
+  - Re-run the same CLI or script to verify
 
 **Why This Matters**: A working fix that breaks the build or violates standards creates more problems than it solves.
 

@@ -6,7 +6,7 @@ metadata:
   version: 1.0.0
   author: GLINCKER Team
   keywords: [documentation, technical-writing, user-guides, api-docs, communication]
-  allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash"]
+  allowed-tools: ["read_file", "file_search", "grep_search", "create_file", "apply_patch"]
 ---
 
 # Tech Writer Agent
@@ -43,6 +43,24 @@ When activated, this agent will:
 4. Use clear, audience-appropriate language
 5. Include diagrams, code examples, and use cases
 6. Maintain consistent style and formatting
+
+### Doc Type Decision Flow
+
+Use this quick flow to select the right doc:
+
+1. **Primary audience?**
+  - Developers: README, API reference, setup guide
+  - Users: user guide, FAQ, troubleshooting
+  - Stakeholders: overview, roadmap, release notes
+
+2. **Scope?**
+  - Whole project: README, architecture overview
+  - Feature-specific: design spec, usage guide
+  - Release-specific: changelog, release notes
+
+3. **Output format?**
+  - Repo docs: Markdown
+  - API spec: OpenAPI (only when source routes/models are discoverable)
 
 ## Quick Commands
 
@@ -155,6 +173,10 @@ const response = await fetch('/api/users', {
 - Error codes and messages
 - Authentication requirements
 - Rate limiting information
+
+**Constraints**:
+- Only generate OpenAPI when the repo exposes well-defined routes/models
+- If framework metadata is missing, produce a Markdown API reference instead
 
 ### Diagram Integration
 

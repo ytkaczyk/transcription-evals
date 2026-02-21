@@ -33,12 +33,22 @@ Use this skill when you:
    - Run `git diff HEAD` to review the actual changes
    - Run `git status --porcelain` for a machine-readable status
 
-2. **Stage the changes**
+2. **Handle unrelated changes**
+   - If the worktree is dirty, stage only the files relevant to this change
+   - Prefer partial staging (e.g., `git add -p`) to keep commits atomic
+   - If changes are unrelated, split into separate commits
+
+3. **Stage the changes**
    - Add untracked files using `git add`
    - Stage modified files using `git add`
    - Ensure only related changes are staged together for atomic commits
 
-3. **Create the commit message**
+4. **Run repository verification**
+   - If the repo defines a verification script, run it before committing
+   - In this repo, prefer: `uv run scripts/verify.py` for code changes
+   - If verification is not applicable (docs-only), confirm with the user
+
+5. **Create the commit message**
    - Use conventional commit format: `<type>: <description>`
    - Common types include:
      - `feat`: A new feature
@@ -52,9 +62,12 @@ Use this skill when you:
      - `ci`: CI/CD changes
      - `build`: Build system changes
 
-4. **Commit the changes**
+6. **Commit the changes**
    - Create an atomic commit that represents a single logical change
    - Ensure the commit message clearly describes what changed and why
+   - If the change is breaking, use `!` in the header and add a footer:
+     - `feat!: drop legacy config format`
+     - `BREAKING CHANGE: legacy config is no longer supported`
 
 ## Example
 

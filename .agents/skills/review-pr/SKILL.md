@@ -44,32 +44,53 @@ Use this skill when you:
 
 ### Step 2: Fetch Review Comments
 
-**Use GitHub MCP tools to get feedback:**
+**Use available GitHub tools to locate the PR and gather feedback:**
+
+- Search for the PR if you only have a title or branch name
+- If a direct review-comment fetch tool is not available, ask the user to
+  paste the review comments or provide the PR URL
 
 ```typescript
-// TypeScript function signature for the MCP tool
-declare function mcp_github_pull_request_read(params: {
-  method: "get_review_comments" | "get_reviews";
-  owner: string;
-  repo: string;
-  pullNumber: number;
-}): Promise<unknown>;
-
-// Usage examples:
-// Get review comments (line-specific feedback)
-await mcp_github_pull_request_read({
-  method: "get_review_comments",
+// Example: list open PRs in a repo
+await mcp_github_list_pull_requests({
   owner: "ytkaczyk",
-  repo: "ai-ocr",
-  pullNumber: 35,
+  repo: "transcription-evals",
+  state: "open",
+  perPage: 20,
 });
 
-// Get general reviews (approval, changes requested, comments)
-await mcp_github_pull_request_read({
-  method: "get_reviews",
+// Example: search PRs to confirm the correct pull request
+await mcp_github_search_pull_requests({
   owner: "ytkaczyk",
-  repo: "ai-ocr",
-  pullNumber: 35,
+  repo: "transcription-evals",
+  query: "is:pr is:open author:ytkaczyk review requested",
+});
+
+// Example: get PR issue comments (general discussion)
+await mcp_github_issue_read({
+  owner: "ytkaczyk",
+  repo: "transcription-evals",
+  issue_number: 123,
+  method: "get_comments",
+});
+
+// Example: create a pending PR review (comments only)
+await mcp_github_pull_request_review_write({
+  owner: "ytkaczyk",
+  repo: "transcription-evals",
+  pullNumber: 123,
+  method: "create",
+  body: "I will address the requested changes and follow up.",
+});
+
+// Example: submit a pending review with a decision
+await mcp_github_pull_request_review_write({
+  owner: "ytkaczyk",
+  repo: "transcription-evals",
+  pullNumber: 123,
+  method: "submit_pending",
+  event: "COMMENT",
+  body: "Changes applied. Please re-review.",
 });
 ```
 
@@ -159,61 +180,23 @@ Result: -70 lines, 6 review comments resolved
 
 ### Step 6: Validate Changes
 
-**⚠️ CRITICAL: ALL validation steps must pass before committing code.**
+**Run repository-appropriate validation before committing.**
 
-Run the complete validation suite in order. **Do NOT skip any step. Do NOT commit until all 4 steps pass.**
+1. **Detect project type and available scripts**
+  - Check for `pyproject.toml`, `package.json`, `Cargo.toml`, etc.
+  - Prefer a repo-provided verification script when present
 
-**1. Build verification (REQUIRED):**
-```bash
-npm run build
-```
-- Ensures TypeScript compiles
-- Catches type errors
-- Verifies production bundle builds
-- **Must complete with 0 errors**
+2. **Run the correct checks**
+  - Python/uv repos: `uv run scripts/verify.py`
+  - Node repos: `npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`
+  - If only docs change, confirm with the user before skipping tests
 
-**2. Lint verification (REQUIRED):**
-```bash
-npm run lint
-```
-- Enforces code style
-- Catches common mistakes
-- Ensures best practices
-- **Must complete with 0 warnings**
-
-**3. Unit tests (REQUIRED):**
-```bash
-npm run test
-```
-- Validates individual functions
-- Tests edge cases
-- Ensures logic correctness
-- **All tests must pass**
-
-**4. End-to-end tests (REQUIRED):**
-```bash
-npm run test:e2e
-```
-- Tests full user workflows
-- Validates integration
-- Catches UI/UX regressions
-- **All tests must pass**
-
-**Validation checklist (ALL must be checked before committing):**
-- [ ] Build passes without errors ✓
-- [ ] Lint passes with 0 warnings ✓
-- [ ] All unit tests pass ✓
-- [ ] All e2e tests pass ✓
-- [ ] No new errors in console (if applicable)
-
-**⚠️ If ANY step fails:**
-1. Fix the issue
-2. Re-run ALL validation steps from the beginning
-3. Only proceed to commit when all 4 steps pass
+3. **If any check fails**
+  - Fix the issue, then re-run the required checks
 
 ### Step 7: Create Atomic Commits
 
-**Only proceed to this step after ALL validation steps pass (build, lint, test, test:e2e).**
+**Only proceed to this step after required validation steps pass.**
 
 **Follow conventional commit format:**
 

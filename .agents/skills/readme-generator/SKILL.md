@@ -3,7 +3,7 @@ name: readme-generator
 description: Generates comprehensive README.md files for software projects by analyzing codebase structure
 license: Apache-2.0
 metadata:
-   allowed-tools: ["Read", "Glob", "Grep", "Write"]
+   allowed-tools: ["read_file", "file_search", "grep_search", "create_file", "apply_patch"]
    version: 1.0.0
    author: GLINCKER Team
    keywords: [documentation, readme, markdown, project]
@@ -30,10 +30,10 @@ When generating a README, follow these steps:
 ### 1. Project Discovery
 
 First, analyze the project structure:
-- Use Glob to find key files: `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, etc.
-- Use Glob to identify main source directories
-- Use Read to examine configuration files
-- Use Grep to find test files and CI configuration
+- Use file search to find key files: `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, etc.
+- Use file search to identify main source directories
+- Use file reads to examine configuration files
+- Use text search to find test files and CI configuration
 
 ### 2. Content Analysis
 
@@ -130,10 +130,10 @@ This skill adapts to project type:
 
 ## Tool Requirements
 
-- **Read**: Examine configuration and source files
-- **Glob**: Find relevant files across project
-- **Grep**: Search for patterns (tests, CI, etc.)
-- **Write**: Create the README.md file
+- **read_file**: Examine configuration and source files
+- **file_search**: Find relevant files across project
+- **grep_search**: Search for patterns (tests, CI, etc.)
+- **create_file/apply_patch**: Create or update the README.md file
 
 ## Limitations
 
@@ -151,7 +151,8 @@ When using this skill:
 2. **Review before writing**: Check generated content before writing to file
 3. **Customize**: Treat output as a template, add project-specific details
 4. **Update regularly**: Regenerate when project structure changes significantly
-5. **Backup existing**: If README.md exists, back it up first
+5. **Backup existing**: If README.md exists, confirm with the user and save
+   a copy as `README.md.bak` before overwriting
 
 ## Error Handling
 
@@ -159,12 +160,6 @@ When using this skill:
 - **Multiple languages detected**: Generate sections for each, note polyglot nature
 - **Existing README**: Prompt user before overwriting, offer to merge
 - **Missing key info**: Generate placeholder sections with TODO markers
-
-## Related Skills
-
-- [changelog-generator](../../automation/changelog-generator/SKILL.md) - Create CHANGELOG.md
-- [api-doc-generator](../api-doc-generator/SKILL.md) - Generate API documentation
-- [license-picker](../../automation/license-picker/SKILL.md) - Add license files
 
 ## Changelog
 
