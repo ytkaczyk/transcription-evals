@@ -11,20 +11,28 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pyfiglet import figlet_format
 from rich.console import Console, Group
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from rich.theme import Theme
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import RichLog, Static
 from textual import work
 from evaluation_runner import EvaluationRunner
 from evaluation_runner_types import GlobalContext, RuntimePaths
+from report_generators.summary_md_report_generator import generate_summary_md_report
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-console = Console()
+# Custom theme to style markdown headings
+custom_theme = Theme({
+    "markdown.h2": "bold magenta"
+})
+
+console = Console(theme=custom_theme)
 
 # Configure logging
 logging.basicConfig(
@@ -132,7 +140,8 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
 def _build_banner_renderable(args: argparse.Namespace) -> Panel:
     art = figlet_format("Transcription\n    Evals", font="standard")
     title_text = Text(art, style="bold blue")
-    title_text.append("  Audio Model Evaluator\n", style="bold magenta")
+    title_text.append(
+        "  Audio Model Transcription Evaluations\n", style="bold magenta")
 
     config_abs = os.path.abspath(args.config_file)
     lazy_status = "✅ [bold green]Enabled[/bold green]" if args.lazy_transcription else "[bold yellow]Disabled[/bold yellow]"
@@ -160,6 +169,63 @@ def _build_directories_panel(paths: RuntimePaths) -> Panel:
         table.add_row("Excel template", paths.excel_report_template)
     return Panel(table, border_style="blue",
                  title="[bold magenta]Directories[/bold magenta]")
+
+
+def _get_report_paths(
+    args: argparse.Namespace, paths: RuntimePaths
+) -> tuple[str, str | None]:
+    """Build the expected report paths for the current run."""
+    report_stem = f"{Path(args.config_file).stem}-report"
+    md_report_path = os.path.join(paths.eval_dir, f"{report_stem}.md")
+    xlsx_report_path = None
+    if paths.excel_report_template:
+        xlsx_report_path = os.path.join(paths.eval_dir, f"{report_stem}.xlsx")
+    return md_report_path, xlsx_report_path
+
+
+def _build_results_panel(
+    summary_markdown: str | None,
+    args: argparse.Namespace,
+    paths: RuntimePaths,
+) -> Panel:
+    """Build the Results panel with summary markdown and report paths."""
+    content_parts: list = []
+
+    if summary_markdown:
+        summary_text = summary_markdown.strip()
+        if not summary_text:
+            summary_text = "Results summary unavailable."
+
+        # Create content with markdown summary
+        content_parts.append(Markdown(summary_text))
+
+    # Get report paths and check existence
+    md_report_path, xlsx_report_path = _get_report_paths(args, paths)
+    md_exists = os.path.exists(md_report_path)
+    xlsx_exists = bool(xlsx_report_path and os.path.exists(xlsx_report_path))
+
+    # Add reports table
+    reports_table = Table.grid(padding=(0, 2))
+    reports_table.add_column(style="bold magenta", min_width=20)
+    reports_table.add_column(style="blue")
+
+    md_status = "✅" if md_exists else "❌"
+    reports_table.add_row("Markdown report", f"{md_status} {md_report_path}")
+
+    if xlsx_report_path:
+        xlsx_status = "✅" if xlsx_exists else "❌"
+        reports_table.add_row(
+            "Excel report", f"{xlsx_status} {xlsx_report_path}")
+    else:
+        reports_table.add_row("Excel report", "❌ Not generated (no template)")
+
+    content_parts.append(reports_table)
+
+    return Panel(
+        Group(*content_parts),
+        border_style="blue",
+        title="[bold magenta]Results[/bold magenta]"
+    )
 
 
 def _setup_logging(config_file: Path) -> None:
@@ -244,18 +310,35 @@ class EvaluatorApp(App):
         self._args = args
         self._config = config
         self._paths = paths
+        self._summary_markdown: str | None = None
 
     def compose(self) -> ComposeResult:
         """Build the widget layout: scrollable main area + fixed log panel."""
         with VerticalScroll(id="main-content"):
             yield Static(_build_banner_renderable(self._args))
             yield Static(_build_directories_panel(self._paths))
+            yield Static(
+                _build_results_panel(
+                    None,  # "Results will appear after evaluation.",
+                    self._args,
+                    self._paths,
+                ),
+                id="results-panel",
+            )
         yield RichLog(id="log-panel", auto_scroll=True, markup=True)
 
     def on_ready(self) -> None:
         """Wire up the log handler and start the evaluation worker."""
         logging.getLogger().addHandler(RichLogHandler(self))
         self._run_evaluation()
+
+    def get_summary_markdown(self) -> str | None:
+        """Retrieve the generated summary markdown after evaluation completes."""
+        return self._summary_markdown
+
+    def get_safe_summary_markdown(self) -> str:
+        """Get the summary markdown, or a safe default if it's not available."""
+        return self.get_summary_markdown() or "[bold yellow]Summary markdown is not available.[/bold yellow]"
 
     @work
     async def _run_evaluation(self) -> None:
@@ -265,6 +348,10 @@ class EvaluatorApp(App):
                 args=self._args, config=self._config, paths=self._paths
             )
             await EvaluationRunner(global_context).run()
+            self._summary_markdown = await generate_summary_md_report(
+                self._args.config_file,
+                self._paths.outputs_dir,
+            )
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.error("Evaluation failed: %s", exc)
         finally:
@@ -303,7 +390,12 @@ def main():
         console.print(_build_banner_renderable(args))
         console.print(_build_directories_panel(paths))
 
-        EvaluatorApp(args, config, paths).run()
+        app = EvaluatorApp(args, config, paths)
+        app.run()
+
+        # Print results after TUI exits
+        console.print(_build_results_panel(
+            app.get_safe_summary_markdown(), args, paths))
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Exception in main: %s", e)
