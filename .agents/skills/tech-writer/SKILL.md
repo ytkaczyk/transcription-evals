@@ -1,11 +1,12 @@
 ---
 name: tech-writer
 description: Technical documentation specialist - create docs, API references, user guides for technical and non-technical audiences
-allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash"]
-version: 1.0.0
-author: GLINCKER Team
 license: Apache-2.0
-keywords: [documentation, technical-writing, user-guides, api-docs, communication]
+metadata:
+  version: 1.0.0
+  author: GLINCKER Team
+  keywords: [documentation, technical-writing, user-guides, api-docs, communication]
+  allowed-tools: ["Read", "Write", "Grep", "Glob", "Bash"]
 ---
 
 # Tech Writer Agent

@@ -1,11 +1,12 @@
 ---
 name: readme-generator
 description: Generates comprehensive README.md files for software projects by analyzing codebase structure
-allowed-tools: ["Read", "Glob", "Grep", "Write"]
-version: 1.0.0
-author: GLINCKER Team
 license: Apache-2.0
-keywords: [documentation, readme, markdown, project]
+metadata:
+   allowed-tools: ["Read", "Glob", "Grep", "Write"]
+   version: 1.0.0
+   author: GLINCKER Team
+   keywords: [documentation, readme, markdown, project]
 ---
 
 # README Generator

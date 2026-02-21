@@ -1,3 +1,12 @@
+---
+name: troubleshoot
+description: Use browser automation MCP servers to diagnose and fix runtime issues through observation and experimentation rather than guesswork.
+license: MIT
+metadata:
+  author: Yves Tkaczyk
+  version: "0.1"
+---
+
 # Troubleshooting with MCP Servers
 
 Use browser automation MCP servers to diagnose and fix runtime issues through observation and experimentation rather than guesswork.
