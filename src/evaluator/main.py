@@ -23,7 +23,7 @@ from textual import work
 from evaluation_runner import EvaluationRunner
 from app_types import AppContext, RuntimePaths
 from report_generators.summary_md_report_generator import generate_summary_md_report
-from ui.progress_widget import TranscriptionProgress
+from ui.transcription_progress_panel import TranscriptionProgressPanel
 from ui.messages import TranscriptionProgressUpdate
 
 # Ensure the src/evaluator directory is in the python path
@@ -319,7 +319,7 @@ class EvaluatorApp(App):
         with VerticalScroll(id="main-content"):
             yield Static(_build_banner_renderable(self._args))
             yield Static(_build_directories_panel(self._paths))
-            yield TranscriptionProgress(
+            yield TranscriptionProgressPanel(
                 inputs=self._config.get("inputs", []),
                 models=self._config.get("models", []),
             )
@@ -338,12 +338,12 @@ class EvaluatorApp(App):
         logging.getLogger().addHandler(RichLogHandler(self))
         self._run_evaluation()
 
-    def on_transcription_progress_update(
+    def on_transcription_progress_panel_update(
         self, message: TranscriptionProgressUpdate
     ) -> None:
-        """Route progress update messages to the progress widget."""
+        """Route progress update messages to the progress panel."""
         try:
-            progress_widget = self.query_one(TranscriptionProgress)
+            progress_widget = self.query_one(TranscriptionProgressPanel)
             progress_widget.post_message(message)
         except Exception:  # pylint: disable=broad-exception-caught
             pass
