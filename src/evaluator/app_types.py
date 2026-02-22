@@ -1,5 +1,9 @@
 from dataclasses import dataclass
 import argparse
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from textual.app import App
 
 
 @dataclass
@@ -22,3 +26,4 @@ class AppContext:
     args: argparse.Namespace
     config: dict
     paths: RuntimePaths
+    app: "App | None" = None

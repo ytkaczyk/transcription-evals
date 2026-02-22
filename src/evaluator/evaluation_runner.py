@@ -16,6 +16,7 @@ from report_generators.md_report_generator import generate_md_report
 from transcribers.transcriber_factory import TranscriberFactory
 from app_types import AppContext
 from evaluation_runner_types import EvaluationContext
+from ui.messages import TranscriptionProgressUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,39 @@ class EvaluationRunner:
 
     def __init__(self, app_context: AppContext):
         self.global_context = app_context
+
+    def _post_progress_update(
+        self,
+        model_name: str,
+        model_label: str | None,
+        status: str,
+        audio_filename: str,
+        completed: bool = False,
+    ) -> None:
+        """
+        Post a progress update message to the app if it's available.
+
+        Args:
+            model_name: Name of the model.
+            model_label: Optional label for the model.
+            status: Current status (e.g., "Transcribing" or "Processing").
+            audio_filename: Name of the audio file being processed.
+            completed: Whether this update should increment the progress bar.
+        """
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
+        if not self.global_context.app:
+            return
+
+        message = TranscriptionProgressUpdate(
+            model_name=model_name,
+            model_label=model_label,
+            status=status,
+            audio_filename=audio_filename,
+            completed=completed,
+        )
+        self.global_context.app.call_from_thread(
+            self.global_context.app.post_message, message
+        )
 
     async def run(self):
         """
@@ -107,6 +141,15 @@ class EvaluationRunner:
             )
 
             try:
+                # Post progress: transcribing
+                self._post_progress_update(
+                    model_name=model_name,
+                    model_label=label,
+                    status="Transcribing",
+                    audio_filename=audio_file,
+                    completed=False,
+                )
+
                 transcript_path = self._transcribe_audio_file_sync(
                     transcriber, evaluation_context
                 )
@@ -116,8 +159,26 @@ class EvaluationRunner:
                     "Transcript saved to: %s", evaluation_context.transcript_path
                 )
 
+                # Post progress: processing stats
+                self._post_progress_update(
+                    model_name=model_name,
+                    model_label=label,
+                    status="Processing",
+                    audio_filename=audio_file,
+                    completed=False,
+                )
+
                 stats_path = self._sync_compute_stats(evaluation_context)
                 evaluation_context.stats_path = stats_path
+
+                # Post progress: completed
+                self._post_progress_update(
+                    model_name=model_name,
+                    model_label=label,
+                    status="Processing",
+                    audio_filename=audio_file,
+                    completed=True,
+                )
             except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error(
                     "Failed processing '%s' with model '%s': %s",

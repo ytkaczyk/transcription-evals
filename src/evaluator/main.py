@@ -23,6 +23,8 @@ from textual import work
 from evaluation_runner import EvaluationRunner
 from app_types import AppContext, RuntimePaths
 from report_generators.summary_md_report_generator import generate_summary_md_report
+from ui.progress_widget import TranscriptionProgress
+from ui.messages import TranscriptionProgressUpdate
 
 # Ensure the src/evaluator directory is in the python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -317,6 +319,10 @@ class EvaluatorApp(App):
         with VerticalScroll(id="main-content"):
             yield Static(_build_banner_renderable(self._args))
             yield Static(_build_directories_panel(self._paths))
+            yield TranscriptionProgress(
+                inputs=self._config.get("inputs", []),
+                models=self._config.get("models", []),
+            )
             yield Static(
                 _build_results_panel(
                     None,  # "Results will appear after evaluation.",
@@ -332,6 +338,16 @@ class EvaluatorApp(App):
         logging.getLogger().addHandler(RichLogHandler(self))
         self._run_evaluation()
 
+    def on_transcription_progress_update(
+        self, message: TranscriptionProgressUpdate
+    ) -> None:
+        """Route progress update messages to the progress widget."""
+        try:
+            progress_widget = self.query_one(TranscriptionProgress)
+            progress_widget.post_message(message)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
     def get_summary_markdown(self) -> str | None:
         """Retrieve the generated summary markdown after evaluation completes."""
         return self._summary_markdown
@@ -345,7 +361,7 @@ class EvaluatorApp(App):
         """Run EvaluationRunner in an async Textual worker; exit when done."""
         try:
             app_context = AppContext(
-                args=self._args, config=self._config, paths=self._paths
+                args=self._args, config=self._config, paths=self._paths, app=self
             )
             await EvaluationRunner(app_context).run()
             self._summary_markdown = await generate_summary_md_report(
