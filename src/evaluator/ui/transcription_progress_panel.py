@@ -59,7 +59,7 @@ class TranscriptionProgressPanel(Static):
             return f"{model_name} ({model_label})"
         return model_name
 
-    def on_transcription_progress_update(
+    def on_transcription_progress_panel_update(
         self, message: TranscriptionProgressUpdate
     ) -> None:
         """Handle progress update messages from the EvaluationRunner."""

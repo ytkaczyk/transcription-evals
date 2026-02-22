@@ -338,7 +338,7 @@ class EvaluatorApp(App):
         logging.getLogger().addHandler(RichLogHandler(self))
         self._run_evaluation()
 
-    def on_transcription_progress_update(
+    def on_transcription_progress_panel_update(
         self, message: TranscriptionProgressUpdate
     ) -> None:
         """Route progress update messages to the progress panel."""
