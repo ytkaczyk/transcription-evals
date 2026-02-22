@@ -1,7 +1,8 @@
 """
 Unit tests for the main module.
 """
-from main import setup_paths
+import argparse
+from main import setup_paths, EvaluatorApp
 from app_types import RuntimePaths
 
 
@@ -44,3 +45,31 @@ def test_setup_paths_without_template(tmp_path):
     assert isinstance(paths, RuntimePaths)
     assert paths.excel_report_template is None
     assert paths.eval_dir.endswith("config")
+
+
+def _make_evaluator_app(tmp_path) -> EvaluatorApp:
+    """Helper to create a minimal EvaluatorApp instance for testing."""
+    args = argparse.Namespace(config_file=str(tmp_path / "config.json"), lazy_transcription=False)
+    config: dict = {"inputs": [], "models": [], "paths": {"inputs": "inputs", "outputs": "outputs"}}
+    paths = RuntimePaths(
+        inputs_dir=str(tmp_path / "inputs"),
+        intermediate_dir=str(tmp_path / "intermediate"),
+        outputs_dir=str(tmp_path / "outputs"),
+        eval_dir=str(tmp_path),
+    )
+    return EvaluatorApp(args, config, paths)
+
+
+def test_get_safe_summary_markdown_returns_fallback_when_not_set(tmp_path):
+    """get_safe_summary_markdown returns markdown bold+underline text when summary is None."""
+    app = _make_evaluator_app(tmp_path)
+    result = app.get_safe_summary_markdown()
+    assert result == "**__Summary markdown is not available.__**"
+
+
+def test_get_safe_summary_markdown_returns_summary_when_set(tmp_path):
+    """get_safe_summary_markdown returns the actual summary markdown when set."""
+    app = _make_evaluator_app(tmp_path)
+    app._summary_markdown = "# My Report\nsome content"  # pylint: disable=protected-access
+    result = app.get_safe_summary_markdown()
+    assert result == "# My Report\nsome content"
