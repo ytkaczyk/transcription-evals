@@ -354,7 +354,7 @@ class EvaluatorApp(App):
 
     def get_safe_summary_markdown(self) -> str:
         """Get the summary markdown, or a safe default if it's not available."""
-        return self.get_summary_markdown() or "[bold yellow]Summary markdown is not available.[/bold yellow]"
+        return self.get_summary_markdown() or "**__Summary markdown is not available.__**"
 
     @work
     async def _run_evaluation(self) -> None:
