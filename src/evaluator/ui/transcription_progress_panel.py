@@ -1,5 +1,5 @@
 """
-Custom widget for displaying transcription progress.
+Custom widget for displaying transcription progress panel.
 """
 import logging
 from typing import Optional
@@ -13,7 +13,7 @@ from ui.messages import TranscriptionProgressUpdate
 logger = logging.getLogger(__name__)
 
 
-class TranscriptionProgress(Static):
+class TranscriptionProgressPanel(Static):
     """
     Widget that displays real-time progress for transcription of audio files
     across multiple models.
@@ -24,7 +24,7 @@ class TranscriptionProgress(Static):
 
     def __init__(self, inputs: list, models: list, **kwargs) -> None:
         """
-        Initialize the TranscriptionProgress widget.
+        Initialize the TranscriptionProgressPanel widget.
 
         Args:
             inputs: List of input items from the config (each with 'audio' key).

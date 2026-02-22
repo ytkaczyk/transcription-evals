@@ -2,6 +2,6 @@
 UI components for the transcription evaluator.
 """
 from ui.messages import TranscriptionProgressUpdate
-from ui.progress_widget import TranscriptionProgress
+from ui.transcription_progress_panel import TranscriptionProgressPanel
 
-__all__ = ["TranscriptionProgress", "TranscriptionProgressUpdate"]
+__all__ = ["TranscriptionProgressPanel", "TranscriptionProgressUpdate"]
