@@ -21,7 +21,7 @@ class MockTranscriber(AbstractTranscriber):
     def name(self) -> str:
         return "Mock Transcriber"
 
-    def transcribe(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
+    def transcribe_sync(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
         # pylint: disable=unused-argument
         return TranscriptResult(name=self.name, conversation=[])
 

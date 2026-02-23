@@ -65,7 +65,7 @@ class TestAssemblyAITranscriber:
         assert transcriber.name == "AssemblyAI"
 
     @patch("transcribers.assembly_ai.aai.TranscriptionConfig")
-    def test_transcribe_success(self, mock_config_cls, mock_env_api_key, mock_aai_transcriber_cls):
+    async def test_transcribe_success(self, mock_config_cls, mock_env_api_key, mock_aai_transcriber_cls):
         """Test successful transcription with options."""
         # pylint: disable=unused-argument
         transcriber = AssemblyAITranscriber()
@@ -84,7 +84,7 @@ class TestAssemblyAITranscriber:
         mock_transcript.utterances = [u1, u2]
         mock_transcriber_instance.transcribe.return_value = mock_transcript
 
-        transcriber.transcribe(
+        await transcriber.transcribe(
             "test.mp3", options={"prompt": "custom prompt"})
 
         # Verify config creation
@@ -101,7 +101,7 @@ class TestAssemblyAITranscriber:
         assert kwargs["config"] == mock_config_cls.return_value
 
     @patch("transcribers.assembly_ai.aai.TranscriptionConfig")
-    def test_transcribe_default_prompt(self, mock_config_cls, mock_env_api_key, mock_aai_transcriber_cls):
+    async def test_transcribe_default_prompt(self, mock_config_cls, mock_env_api_key, mock_aai_transcriber_cls):
         """Test transcription uses default prompt when none provided."""
         # pylint: disable=unused-argument
         transcriber = AssemblyAITranscriber()
@@ -119,7 +119,7 @@ class TestAssemblyAITranscriber:
         mock_transcriber_instance.transcribe.return_value = mock_transcript
 
         # Call transcribe with empty options
-        result = transcriber.transcribe("test.mp3", options={})
+        result = await transcriber.transcribe("test.mp3", options={})
 
         # Verify config creation with default prompt
         mock_config_cls.assert_called_once_with(
@@ -138,7 +138,7 @@ class TestAssemblyAITranscriber:
         assert result.conversation[0].person == "Speaker A"
         assert result.conversation[0].content == "Hello"
 
-    def test_transcribe_error(self, mock_env_api_key, mock_aai_transcriber_cls):
+    async def test_transcribe_error(self, mock_env_api_key, mock_aai_transcriber_cls):
         """Test transcription failure."""
         # pylint: disable=unused-argument
         transcriber = AssemblyAITranscriber()
@@ -151,7 +151,7 @@ class TestAssemblyAITranscriber:
         mock_transcriber_instance.transcribe.return_value = mock_transcript
 
         with pytest.raises(RuntimeError, match="Transcription failed: Mock Error"):
-            transcriber.transcribe("test.mp3")
+            await transcriber.transcribe("test.mp3")
 
     def test_format_timestamp(self, mock_env_api_key, mock_aai_transcriber_cls):
         """Test timestamp formatting."""
@@ -161,7 +161,7 @@ class TestAssemblyAITranscriber:
         assert transcriber._format_timestamp(3661000) == "01:01:01"
 
     @patch("transcribers.assembly_ai.aai.TranscriptionConfig")
-    def test_transcribe_with_options(self, mock_config_cls, mock_env_api_key, mock_aai_transcriber_cls):
+    async def test_transcribe_with_options(self, mock_config_cls, mock_env_api_key, mock_aai_transcriber_cls):
         """Test transcribe with custom options."""
         # pylint: disable=unused-argument
         transcriber = AssemblyAITranscriber()
@@ -176,7 +176,7 @@ class TestAssemblyAITranscriber:
         mock_transcriber_instance.transcribe.return_value = mock_transcript
 
         custom_options = {"speech_models": ["best"], "language_code": "es"}
-        transcriber.transcribe("test.mp3", options=custom_options)
+        await transcriber.transcribe("test.mp3", options=custom_options)
 
         # Verify config creation
         mock_config_cls.assert_called_once()

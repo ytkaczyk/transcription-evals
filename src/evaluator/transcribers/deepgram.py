@@ -74,7 +74,8 @@ class DeepgramTranscriber(AbstractTranscriber):
                     ))
         return items
 
-    def transcribe(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
+    def transcribe_sync(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
+        """Synchronous transcription. Called directly from worker threads or via the base-class async wrapper."""
         try:
             with open(audio_file_path, "rb") as file:
                 buffer_data = file.read()
@@ -90,8 +91,7 @@ class DeepgramTranscriber(AbstractTranscriber):
             if options:
                 default_options.update(options)
 
-            # Using direct access to v1 media client which takes kwargs
-            response = self.client.listen.v1.media.transcribe_file(
+            response = self.client.listen.v1.media.transcribe_file(  # pylint: disable=no-member
                 request=buffer_data,
                 **default_options
             )
