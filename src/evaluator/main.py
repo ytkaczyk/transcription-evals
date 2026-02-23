@@ -22,6 +22,7 @@ from ui.transcription_progress_panel import TranscriptionProgressPanel
 from ui.directories_panel import DirectoriesPanel
 from ui.results_panel import ResultsPanel
 from ui.banner_panel import BannerPanel
+from ui.footer_log_panel import FooterLogPanel
 from ui.messages import TranscriptionProgressUpdate
 
 # Ensure the src/evaluator directory is in the python path
@@ -197,13 +198,7 @@ class RichLogHandler(logging.Handler):
 class EvaluatorApp(App):
     """Textual TUI for the audio model evaluator."""
 
-    CSS = """
-    #log-panel {
-        dock: bottom;
-        height: 7;
-        border-top: solid blue;
-        background: $surface;
-    }
+    DEFAULT_CSS = """
     #main-content {
         height: 1fr;
     }
@@ -234,7 +229,7 @@ class EvaluatorApp(App):
                 ResultsPanel(None, self._args, self._paths).build(),
                 id="results-panel",
             )
-        yield RichLog(id="log-panel", auto_scroll=True, markup=True)
+        yield FooterLogPanel()
 
     def on_ready(self) -> None:
         """Wire up the log handler and start the evaluation worker."""
