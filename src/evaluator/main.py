@@ -11,7 +11,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pyfiglet import figlet_format
 from rich.console import Console, Group
-from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -24,6 +23,7 @@ from evaluation_runner import EvaluationRunner
 from app_types import AppContext, RuntimePaths
 from report_generators.summary_md_report_generator import generate_summary_md_report
 from ui.transcription_progress_panel import TranscriptionProgressPanel
+from ui.results_panel import ResultsPanel
 from ui.messages import TranscriptionProgressUpdate
 
 # Ensure the src/evaluator directory is in the python path
@@ -173,63 +173,6 @@ def _build_directories_panel(paths: RuntimePaths) -> Panel:
                  title="[bold magenta]Directories[/bold magenta]")
 
 
-def _get_report_paths(
-    args: argparse.Namespace, paths: RuntimePaths
-) -> tuple[str, str | None]:
-    """Build the expected report paths for the current run."""
-    report_stem = f"{Path(args.config_file).stem}-report"
-    md_report_path = os.path.join(paths.eval_dir, f"{report_stem}.md")
-    xlsx_report_path = None
-    if paths.excel_report_template:
-        xlsx_report_path = os.path.join(paths.eval_dir, f"{report_stem}.xlsx")
-    return md_report_path, xlsx_report_path
-
-
-def _build_results_panel(
-    summary_markdown: str | None,
-    args: argparse.Namespace,
-    paths: RuntimePaths,
-) -> Panel:
-    """Build the Results panel with summary markdown and report paths."""
-    content_parts: list = []
-
-    if summary_markdown:
-        summary_text = summary_markdown.strip()
-        if not summary_text:
-            summary_text = "Results summary unavailable."
-
-        # Create content with markdown summary
-        content_parts.append(Markdown(summary_text))
-
-    # Get report paths and check existence
-    md_report_path, xlsx_report_path = _get_report_paths(args, paths)
-    md_exists = os.path.exists(md_report_path)
-    xlsx_exists = bool(xlsx_report_path and os.path.exists(xlsx_report_path))
-
-    # Add reports table
-    reports_table = Table.grid(padding=(0, 2))
-    reports_table.add_column(style="bold magenta", min_width=20)
-    reports_table.add_column(style="blue")
-
-    md_status = "✅" if md_exists else "❌"
-    reports_table.add_row("Markdown report", f"{md_status} {md_report_path}")
-
-    if xlsx_report_path:
-        xlsx_status = "✅" if xlsx_exists else "❌"
-        reports_table.add_row(
-            "Excel report", f"{xlsx_status} {xlsx_report_path}")
-    else:
-        reports_table.add_row("Excel report", "❌ Not generated (no template)")
-
-    content_parts.append(reports_table)
-
-    return Panel(
-        Group(*content_parts),
-        border_style="blue",
-        title="[bold magenta]Results[/bold magenta]"
-    )
-
-
 def _setup_logging(config_file: Path) -> None:
     """
     Configures file logging for the current run.
@@ -324,11 +267,7 @@ class EvaluatorApp(App):
                 models=self._config.get("models", []),
             )
             yield Static(
-                _build_results_panel(
-                    None,  # "Results will appear after evaluation.",
-                    self._args,
-                    self._paths,
-                ),
+                ResultsPanel(None, self._args, self._paths).build(),
                 id="results-panel",
             )
         yield RichLog(id="log-panel", auto_scroll=True, markup=True)
@@ -410,8 +349,8 @@ def main():
         app.run()
 
         # Print results after TUI exits
-        console.print(_build_results_panel(
-            app.get_safe_summary_markdown(), args, paths))
+        console.print(ResultsPanel(
+            app.get_safe_summary_markdown(), args, paths).build())
 
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Exception in main: %s", e)
