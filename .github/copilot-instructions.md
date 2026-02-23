@@ -76,6 +76,15 @@ This is the **correct pattern for all future panels and progress bars** that sho
 - Subtitle: `bold magenta`
 - Lazy transcription enabled: `bold green` / disabled: `bold yellow`
 
+### Textual/Rich CSS & Styling Gotchas
+- **CSS class name**: Must be named `DEFAULT_CSS` (not `CSS`) for Textual to recognize and apply the stylesheet.
+- **Panel height**: Cannot be set to `auto` — must be computed dynamically based on content. In `__init__`, calculate height: `self.styles.height = len(models) + 2` (where +2 accounts for border/padding). This ensures the container properly constrains child widgets.
+- **Grid column sizing**: Use `grid-columns: auto auto 1fr;` pattern — `auto` for fixed-width columns (model name, progress bar), then `1fr` for the final column to fill remaining space.
+- **Color mapping**: Rich color names do **not** reliably map to Textual colors. Use `ansi_<color>` format **everywhere** (CSS rules AND Rich markup) for guaranteed proper rendering (e.g., `ansi_magenta`, `ansi_blue`, `ansi_green`). Use ansi colors in both CSS and in markup like `f"[ansi_blue]{text}[/ansi_blue]"`.
+- **CSS class-based styling over inline markup**: Apply styling via CSS classes (`.model-label`, `.status-label`) rather than embedding Rich markup in widget content. Keep widget content plain and use CSS to define appearance. This separates concerns and makes styling consistent.
+- **Widget references for updates**: Store widget references in state dicts to enable direct method calls like `.advance()` and `.update()`. Example: `state["progressbar_widget"] = progress_bar` then later `progress_bar.advance(1)`.
+- **Rich markup whitespace**: When combining colors in markup, include spaces inside markup tags for proper rendering: `f"[white] {filename}[/white]"` not `f"[white]{filename}[/white]"` + space.
+
 
 ## Example: Transcriber Implementation
 ```python
