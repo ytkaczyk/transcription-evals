@@ -9,11 +9,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from pyfiglet import figlet_format
-from rich.console import Console, Group
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
+from rich.console import Console
 from rich.theme import Theme
 from textual.app import App, ComposeResult
 from textual.containers import VerticalScroll
@@ -25,6 +21,7 @@ from report_generators.summary_md_report_generator import generate_summary_md_re
 from ui.transcription_progress_panel import TranscriptionProgressPanel
 from ui.directories_panel import DirectoriesPanel
 from ui.results_panel import ResultsPanel
+from ui.banner_panel import BannerPanel
 from ui.messages import TranscriptionProgressUpdate
 
 # Ensure the src/evaluator directory is in the python path
@@ -140,26 +137,6 @@ def setup_paths(config_path: str, config: dict) -> RuntimePaths:
         raise
 
 
-def _build_banner_renderable(args: argparse.Namespace) -> Panel:
-    art = figlet_format("Transcription\n    Evals", font="standard")
-    title_text = Text(art, style="bold blue")
-    title_text.append(
-        "  Audio Model Transcription Evaluations\n", style="bold magenta")
-
-    config_abs = os.path.abspath(args.config_file)
-    lazy_status = "✅ [bold green]Enabled[/bold green]" if args.lazy_transcription else "[bold yellow]Disabled[/bold yellow]"
-
-    info_table = Table.grid(padding=(0, 2))
-    info_table.add_column(style="bold magenta")
-    info_table.add_column(style="blue")
-    info_table.add_row("Config file", config_abs)
-    info_table.add_row("Lazy transcription", lazy_status)
-
-    content = Group(title_text, info_table)
-    return Panel(content, border_style="magenta",
-                 title="[bold hot_pink]Transcription Evals[/bold hot_pink]")
-
-
 def _setup_logging(config_file: Path) -> None:
     """
     Configures file logging for the current run.
@@ -247,7 +224,7 @@ class EvaluatorApp(App):
     def compose(self) -> ComposeResult:
         """Build the widget layout: scrollable main area + fixed log panel."""
         with VerticalScroll(id="main-content"):
-            yield Static(_build_banner_renderable(self._args))
+            yield Static(BannerPanel(self._args).build())
             yield Static(DirectoriesPanel(self._paths).build())
             yield TranscriptionProgressPanel(
                 inputs=self._config.get("inputs", []),
@@ -329,7 +306,7 @@ def main():
         paths = setup_paths(args.config_file, config)
         logger.debug("Paths set up: %s", paths)
 
-        console.print(_build_banner_renderable(args))
+        console.print(BannerPanel(args).build())
         console.print(DirectoriesPanel(paths).build())
 
         app = EvaluatorApp(args, config, paths)
