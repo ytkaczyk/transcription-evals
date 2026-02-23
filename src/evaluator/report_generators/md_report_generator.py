@@ -159,8 +159,11 @@ class MdReportGenerator:
             model_name_val, model_label_val = group_key  # type: ignore[misc]
             model_name_str = str(
                 model_name_val) if model_name_val is not None else "Unknown"
-            model_label_str = str(
-                model_label_val) if model_label_val is not None else None
+            model_label_str = (
+                str(model_label_val)
+                if model_label_val is not None and pd.notna(model_label_val)
+                else None
+            )
             sections.append(self._build_model_eval_table(
                 model_name_str, model_label_str, group_df))
 
