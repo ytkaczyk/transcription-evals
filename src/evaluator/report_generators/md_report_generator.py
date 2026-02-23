@@ -159,9 +159,12 @@ class MdReportGenerator:
             model_name_val, model_label_val = group_key  # type: ignore[misc]
             model_name_str = str(
                 model_name_val) if model_name_val is not None else "Unknown"
+            # Convert to string and check for pandas NA/NaN values
+            model_label_temp = str(
+                model_label_val) if model_label_val is not None else ""
             model_label_str = (
-                str(model_label_val)
-                if model_label_val is not None and pd.notna(model_label_val)
+                model_label_temp
+                if model_label_temp and model_label_temp.lower() != "nan"
                 else None
             )
             sections.append(self._build_model_eval_table(
