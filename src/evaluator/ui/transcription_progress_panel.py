@@ -140,7 +140,12 @@ class TranscriptionProgressPanel(Container):
         # Update status text with blue formatting for status
         status_widget = state["status_widget"]
         if status_widget:
-            status_text = f"[ansi_blue]{message.status}[/ansi_blue]"
-            if message.audio_filename:
-                status_text += f"[white] {message.audio_filename}[/white]"
+            # Check if processing is complete for this model
+            progress_bar = state["progressbar_widget"]
+            if progress_bar and progress_bar.progress >= progress_bar.total:
+                status_text = "✅ Done"
+            else:
+                status_text = f"[ansi_blue]{message.status}[/ansi_blue]"
+                if message.audio_filename:
+                    status_text += f"[ansi_white] {message.audio_filename}[/ansi_white]"
             status_widget.update(status_text)
