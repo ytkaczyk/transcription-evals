@@ -23,6 +23,7 @@ from evaluation_runner import EvaluationRunner
 from app_types import AppContext, RuntimePaths
 from report_generators.summary_md_report_generator import generate_summary_md_report
 from ui.transcription_progress_panel import TranscriptionProgressPanel
+from ui.directories_panel import DirectoriesPanel
 from ui.results_panel import ResultsPanel
 from ui.messages import TranscriptionProgressUpdate
 
@@ -159,20 +160,6 @@ def _build_banner_renderable(args: argparse.Namespace) -> Panel:
                  title="[bold hot_pink]Transcription Evals[/bold hot_pink]")
 
 
-def _build_directories_panel(paths: RuntimePaths) -> Panel:
-    table = Table.grid(padding=(0, 2))
-    table.add_column(style="bold magenta", min_width=20)
-    table.add_column(style="blue")
-    table.add_row("Inputs", paths.inputs_dir)
-    table.add_row("Eval root", paths.eval_dir)
-    table.add_row("Intermediate", paths.intermediate_dir)
-    table.add_row("Outputs", paths.outputs_dir)
-    if paths.excel_report_template:
-        table.add_row("Excel template", paths.excel_report_template)
-    return Panel(table, border_style="blue",
-                 title="[bold magenta]Directories[/bold magenta]")
-
-
 def _setup_logging(config_file: Path) -> None:
     """
     Configures file logging for the current run.
@@ -261,7 +248,7 @@ class EvaluatorApp(App):
         """Build the widget layout: scrollable main area + fixed log panel."""
         with VerticalScroll(id="main-content"):
             yield Static(_build_banner_renderable(self._args))
-            yield Static(_build_directories_panel(self._paths))
+            yield Static(DirectoriesPanel(self._paths).build())
             yield TranscriptionProgressPanel(
                 inputs=self._config.get("inputs", []),
                 models=self._config.get("models", []),
@@ -343,7 +330,7 @@ def main():
         logger.debug("Paths set up: %s", paths)
 
         console.print(_build_banner_renderable(args))
-        console.print(_build_directories_panel(paths))
+        console.print(DirectoriesPanel(paths).build())
 
         app = EvaluatorApp(args, config, paths)
         app.run()
