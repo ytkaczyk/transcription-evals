@@ -175,23 +175,38 @@ class MdReportGenerator:
 
     def _build_inputs_table(self, df: pd.DataFrame, inputs_dir: str) -> str:
         """Build the Inputs HTML table."""
-        # Get unique audio files
-        unique_audio = df[['audio_file_name', 'audio_file_duration',
-                           'reference_file', 'reference_text']].drop_duplicates()
+        # Get unique audio files by selecting only the audio_file_name column.
+        # We deduplicate on audio_file_name alone because:
+        # 1. audio_file_name uniquely identifies each input audio file
+        # 2. audio_file_duration may differ slightly between models due to
+        #    different extraction/processing methods, but the actual audio file is identical
+        # 3. reference_file and reference_text are the same for a given audio file
+        #    across all model evaluations
+        unique_audio_df = df[['audio_file_name']].drop_duplicates()
 
         # Resolve inputs directory
         inputs_path = Path(inputs_dir) if inputs_dir else None
 
         rows = []
         # Convert to records for type-safe iteration
-        records = cast(Any, unique_audio.to_dict)('records')
+        # to_dict(orient='records') returns a list of dictionaries, one per row
+        records: List[Any] = unique_audio_df.to_dict(
+            orient='records')  # type: ignore[attr-defined]
         for record in records:
-            # Extract values from dict
+            # Extract audio filename from record
             audio_file = str(record['audio_file_name'])
-            reference_file = str(record['reference_file'])
-            reference_text_val = record['reference_text']
-            reference_text = str(reference_text_val) if pd.notna(
-                reference_text_val) else ""
+
+            # Get reference_file and reference_text from the first row with this audio_file
+            # (they should be identical across all models for the same audio file)
+            audio_rows = df[df['audio_file_name'] == audio_file]
+            if len(audio_rows) > 0:
+                reference_file = str(audio_rows.iloc[0]['reference_file'])
+                reference_text_val = audio_rows.iloc[0]['reference_text']
+                reference_text = str(reference_text_val) if pd.notna(
+                    reference_text_val) else ""
+            else:
+                reference_file = ""
+                reference_text = ""
 
             # Get audio metadata (including duration from the audio file)
             metadata = AudioMetadataExtractor.get_audio_metadata(
