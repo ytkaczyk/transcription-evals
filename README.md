@@ -343,10 +343,9 @@ class MyTranscriber(AbstractTranscriber):
 All transcribers must output normalized to the `TranscriptResult` type:
 - `name`: Provider name
 - `conversation`: List of `ConversationItem` objects with:
-  - `speaker`: Speaker identifier
-  - `text`: Transcribed text
-  - `start_time`: Timestamp in `"HH:MM:SS"` format
-  - `end_time`: Timestamp in `"HH:MM:SS"` format
+  - `timestamp`: Timestamp in `"HH:MM:SS"` format
+  - `person`: Speaker identifier
+  - `content`: Transcribed text
 
 See [src/evaluator/transcribers/types.py](src/evaluator/transcribers/types.py) for complete type definitions.
 
