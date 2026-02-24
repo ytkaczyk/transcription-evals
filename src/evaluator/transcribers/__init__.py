@@ -5,7 +5,7 @@ from .abstract_transcriber import AbstractTranscriber
 from .types import TranscriptResult, ConversationItem
 from .assembly_ai import AssemblyAITranscriber
 from .deepgram import DeepgramTranscriber
-from .mystral_voxtral import MistralVoxtralTranscriber
+from .mistral_voxtral import MistralVoxtralTranscriber
 from .transcriber_factory import TranscriberFactory
 
 

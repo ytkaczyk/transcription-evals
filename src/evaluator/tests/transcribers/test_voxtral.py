@@ -6,7 +6,7 @@ Unit tests for MistralVoxtralTranscriber.
 from unittest.mock import patch, MagicMock, mock_open
 import pytest
 
-from transcribers.mystral_voxtral import MistralVoxtralTranscriber
+from transcribers.mistral_voxtral import MistralVoxtralTranscriber
 from transcribers.types import TranscriptResult
 
 
@@ -23,7 +23,7 @@ class TestMistralVoxtralTranscriber:
     @pytest.fixture
     def mock_mistral_cls(self):
         """Mocks the mistralai.Mistral class."""
-        with patch("transcribers.mystral_voxtral.Mistral") as mock:
+        with patch("transcribers.mistral_voxtral.Mistral") as mock:
             yield mock
 
     def test_init_raises_error_no_key(self, monkeypatch):
@@ -49,7 +49,7 @@ class TestMistralVoxtralTranscriber:
         transcriber = MistralVoxtralTranscriber()
         assert transcriber.name == "Voxtral"
 
-    @patch("transcribers.mystral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
+    @patch("transcribers.mistral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
     async def test_transcribe_success_segments(self, mock_file, mock_env_api_key, mock_mistral_cls):
         """Test successful transcription with segments and diarization."""
         mock_client = MagicMock()
@@ -90,7 +90,7 @@ class TestMistralVoxtralTranscriber:
         assert call_kwargs["timestamp_granularities"] == ["segment"]
         assert call_kwargs["file"]["file_name"] == "test.mp3"
 
-    @patch("transcribers.mystral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
+    @patch("transcribers.mistral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
     async def test_transcribe_language_removes_timestamp_granularities(
         self, mock_file, mock_env_api_key, mock_mistral_cls
     ):
@@ -111,7 +111,7 @@ class TestMistralVoxtralTranscriber:
         assert call_kwargs["language"] == "en"
         assert "timestamp_granularities" not in call_kwargs
 
-    @patch("transcribers.mystral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
+    @patch("transcribers.mistral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
     async def test_transcribe_fallback_text(self, mock_file, mock_env_api_key, mock_mistral_cls):
         """Test fallback to plain transcript text."""
         mock_client = MagicMock()
@@ -138,7 +138,7 @@ class TestMistralVoxtralTranscriber:
             "API Error")
         mock_mistral_cls.return_value = mock_client
 
-        with patch("transcribers.mystral_voxtral.open", new_callable=mock_open, read_data=b"data"):
+        with patch("transcribers.mistral_voxtral.open", new_callable=mock_open, read_data=b"data"):
             transcriber = MistralVoxtralTranscriber()
             with pytest.raises(Exception, match="API Error"):
                 await transcriber.transcribe("test.mp3")
