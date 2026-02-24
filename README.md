@@ -331,7 +331,7 @@ class MyTranscriber(AbstractTranscriber):
         """Human-readable provider name"""
         return "My Provider"
     
-    def transcribe(self, audio_file_path: str) -> TranscriptResult:
+    def transcribe(self, audio_file_path: str, options: Optional[Dict[str, Any]] = None) -> TranscriptResult:
         """Transcribe audio and return normalized result"""
         # Implementation details
         items = [ConversationItem(speaker="Speaker", text="Transcribed text", start_time="00:00:00", end_time="00:00:05")]
