@@ -97,7 +97,9 @@ class TestMistralVoxtralTranscriber:
         """Test language option drops timestamp granularity per API constraint."""
         mock_client = MagicMock()
         mock_response = MagicMock()
-        mock_response.duration = 1.0
+        mock_usage = MagicMock()
+        mock_usage.prompt_audio_seconds = 1.0
+        mock_response.usage = mock_usage
         mock_response.segments = None
         mock_response.words = None
         mock_response.text = "Hello"
@@ -138,7 +140,48 @@ class TestMistralVoxtralTranscriber:
             "API Error")
         mock_mistral_cls.return_value = mock_client
 
-        with patch("transcribers.mistral_voxtral.open", new_callable=mock_open, read_data=b"data"):
+        @patch("transcribers.mistral_voxtral.open", new_callable=mock_open, read_data=b"audio_bytes")
+        async def test_transcribe_success_words(self, mock_file, mock_env_api_key, mock_mistral_cls):
+            """Test successful transcription with words fallback when segments unavailable."""
+            mock_client = MagicMock()
+            mock_response = MagicMock()
+            mock_usage = MagicMock()
+            mock_usage.prompt_audio_seconds = 8.0
+            mock_response.usage = mock_usage
+            mock_response.segments = None
+            mock_response.words = [
+                MagicMock(start=0.5, end=1.5, text="Hello", speaker=0),
+                MagicMock(start=2.0, end=3.0, text="World", speaker=1),
+                MagicMock(start=3.5, end=4.5, text="Test", speaker=0),
+            ]
+            mock_response.text = None
+            mock_client.audio.transcriptions.complete.return_value = mock_response
+            mock_mistral_cls.return_value = mock_client
+
             transcriber = MistralVoxtralTranscriber()
-            with pytest.raises(Exception, match="API Error"):
-                await transcriber.transcribe("test.mp3")
+            result = await transcriber.transcribe("test.mp3")
+
+            assert isinstance(result, TranscriptResult)
+            assert result.name == "Voxtral"
+            assert result.duration == 8.0
+            assert len(result.conversation) == 3
+
+            first = result.conversation[0]
+            assert first.timestamp == "00:00:00"
+            assert first.person == "Speaker 0"
+            assert first.content == "Hello"
+
+            second = result.conversation[1]
+            assert second.timestamp == "00:00:02"
+            assert second.person == "Speaker 1"
+            assert second.content == "World"
+
+            third = result.conversation[2]
+            assert third.timestamp == "00:00:03"
+            assert third.person == "Speaker 0"
+            assert third.content == "Test"
+
+            call_kwargs = mock_client.audio.transcriptions.complete.call_args[1]
+            assert call_kwargs["model"] == "voxtral-mini-latest"
+            assert call_kwargs["diarize"] is True
+            assert call_kwargs["timestamp_granularities"] == ["segment"]

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class MistralVoxtralTranscriber(AbstractTranscriber):
     """
-    Transcriber implementation using Mistral Voxtral offline transcription.
+    Transcriber implementation using the Mistral Voxtral transcription service.
     """
 
     def __init__(self, api_key: Optional[str] = None):
