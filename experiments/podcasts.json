@@ -34,6 +34,9 @@
             "options": {
                 "prompt": "Transcribe verbatim. Maximum readability. Pay attention to rare words and entities. Pharmaceutical accuracy required across all medications and drug names. Preserve natural speech patterns."
             }
+        },
+        {
+            "name": "Voxtral"
         }
     ],
     "paths": {

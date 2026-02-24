@@ -16,6 +16,7 @@ dependencies = [
     "pyfiglet>=1.0.4",
     "textual>=8.0.0",
     "mutagen>=1.47.0",
+    "mistralai>=1.12.4",
 ]
 
 [dependency-groups]
