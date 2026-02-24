@@ -9,7 +9,7 @@ A comprehensive framework for evaluating audio transcription models (Speech-to-T
   - ✅ [AssemblyAI](https://www.assemblyai.com/)
   - ⌛ [AWS Transcribe](https://aws.amazon.com/transcribe/) (pending implementation)
   - ⌛ [Google Speech-to-Text](https://cloud.google.com/speech-to-text) (pending implementation)
-  - ⌛ [Mistral VoxtralAI](https://mistral.ai/) (pending implementation)
+  - ✅ [Voxtral](https://mistral.ai/)
 
 - **Lazy Transcription**: Skip re-transcribing files that already have results, saving time and API costs
 - **Configurable Evaluations**: Define experiments using JSON configuration files with flexible model options
@@ -259,10 +259,10 @@ The experiment configuration is a JSON file that defines your evaluation setup. 
 }
 ```
 
-### Mistral VoxtralAI
+### Voxtral
 ```json
 {
-  "name": "MistralVoxtral",
+  "name": "Voxtral",
   "label": "default"
 }
 ```
