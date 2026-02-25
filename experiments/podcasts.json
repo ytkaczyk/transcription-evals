@@ -37,6 +37,9 @@
         },
         {
             "name": "Voxtral"
+        },
+        {
+            "name": "AWS Transcribe"
         }
     ],
     "paths": {
