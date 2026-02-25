@@ -65,7 +65,7 @@ Lazy Transcript Check        Transcriber Providers
 ### Report Generation
 
 - Markdown and Excel reports are generated from stats outputs
-- Report generators live in `src/evaluator/report_generators/`
+- Report generators live in `src/evaluator/report_generator.py`
 
 ### Preprocessors
 
@@ -106,5 +106,5 @@ Lazy Transcript Check        Transcriber Providers
   4. Export in `src/evaluator/transcribers/__init__.py`
 
 - Add a new report format:
-  1. Implement a generator in `src/evaluator/report_generators/`
+  1. Extend `src/evaluator/report_generator.py`
   2. Wire it into the evaluation runner output stage

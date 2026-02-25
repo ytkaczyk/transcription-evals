@@ -66,7 +66,7 @@ transcription-evals/
 │   ├── evaluator/              # Main application
 │   │   ├── main.py            # CLI entry point with Rich TUI
 │   │   ├── evaluation_runner.py    # Core evaluation orchestrator
-│   │   ├── report_generators/     # Report generation modules
+│   │   ├── report_generator.py    # Report generation module
 │   │   ├── transcribers/          # Provider implementations
 │   │   │   ├── abstract_transcriber.py
 │   │   │   ├── deepgram.py
@@ -208,7 +208,7 @@ The experiment configuration is a JSON file that defines your evaluation setup. 
   - `transcript`: Ground truth transcript JSON file (used for WER calculation)
 
 - **`models`** (Required): Array of transcription providers to evaluate
-  - `name`: Provider name (`"Deepgram"`, `"AssemblyAI"`, `"AwsTranscribe"`, `"GoogleSpeechToText"`, `"MistralVoxtral"`)
+  - `name`: Provider name (`"Deepgram"`, `"AssemblyAI"`, `"Voxtral"`)
   - `label` (Optional): Custom identifier appended to output filenames (e.g., `"nova-3"`)
   - `options` (Optional): Provider-specific parameters (model selection, language, etc.)
 
@@ -387,7 +387,7 @@ The evaluator automatically generates multiple report formats:
 
 ### Transcription Failures
 - Check provider dashboards for quota limits or failures
-- Review error logs in `experiments/logs/` directory
+- Review error logs or console output for detailed error messages
 - Verify network connectivity to provider APIs
 - Run with a single model/file combination to isolate issues
 
