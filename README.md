@@ -7,7 +7,7 @@ A comprehensive framework for evaluating audio transcription models (Speech-to-T
 - **Multi-Provider Support**: Integrate with multiple transcription services:
   - ✅ [Deepgram](https://deepgram.com/)
   - ✅ [AssemblyAI](https://www.assemblyai.com/)
-  - ⌛ [AWS Transcribe](https://aws.amazon.com/transcribe/) (pending implementation)
+  - ✅ [AWS Transcribe](https://aws.amazon.com/transcribe/)
   - ⌛ [Google Speech-to-Text](https://cloud.google.com/speech-to-text) (pending implementation)
   - ✅ [Voxtral](https://mistral.ai/)
 
@@ -96,7 +96,7 @@ transcription-evals/
 - **API Keys** for the transcription services you intend to evaluate:
   - `DEEPGRAM_API_KEY` - [Get Deepgram key](https://console.deepgram.com/)
   - `ASSEMBLYAI_API_KEY` - [Get AssemblyAI key](https://www.assemblyai.com/)
-  - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` - [Configure AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
+  - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_S3_BUCKET` - [Configure AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
   - `GOOGLE_APPLICATION_CREDENTIALS` - [Set up Google Cloud](https://cloud.google.com/speech-to-text/docs/before-you-begin)
   - `MISTRAL_API_KEY` - [Get Mistral key](https://console.mistral.ai/api-keys/)
 
@@ -128,6 +128,11 @@ transcription-evals/
    # Add your API keys to .env
    DEEPGRAM_API_KEY=your_key_here
    ASSEMBLYAI_API_KEY=your_key_here
+   MISTRAL_API_KEY=your_key_here
+   AWS_ACCESS_KEY_ID=your_key_here
+   AWS_SECRET_ACCESS_KEY=your_secret_here
+   AWS_DEFAULT_REGION=us-east-1
+   AWS_S3_BUCKET=your-s3-bucket-name
    # ... add other provider keys as needed
    ```
 

@@ -37,6 +37,9 @@
         },
         {
             "name": "Voxtral"
+        },
+        {
+            "name": "AWSTranscribe"
         }
     ],
     "paths": {
