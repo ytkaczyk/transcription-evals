@@ -85,7 +85,7 @@ class AWSTranscribeTranscriber(AbstractTranscriber):
 
     @property
     def name(self) -> str:
-        return "AWS Transcribe"
+        return "AWSTranscribe"
 
     def _format_timestamp(self, start_time: float) -> str:
         hours = int(start_time // 3600)
