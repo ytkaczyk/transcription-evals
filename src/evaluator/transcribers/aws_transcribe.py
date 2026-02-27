@@ -116,7 +116,9 @@ class AWSTranscribeTranscriber(AbstractTranscriber):
         """Return a human-readable speaker label such as 'Speaker 0'."""
         if not has_speaker_labels:
             return "Unknown"
-        raw = speaker_lookup.get(start_time_str, "spk_0")
+        raw = speaker_lookup.get(start_time_str)
+        if raw is None:
+            return "Unknown"
         return f"Speaker {raw.split('_')[-1]}" if "_" in raw else raw
 
     def _poll_until_complete(self, job_name: str) -> Dict[str, Any]:
