@@ -143,7 +143,8 @@ class AWSTranscribeTranscriber(AbstractTranscriber):
 
     def _download_transcript_json(self, transcript_uri: str) -> Dict[str, Any]:
         """Fetch and decode the transcript JSON from the given URI."""
-        logger.info("Downloading transcript from: %s", transcript_uri)
+        logger.info("Downloading transcript from: %s",
+                    transcript_uri.split('?')[0])
         with urllib.request.urlopen(transcript_uri) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
