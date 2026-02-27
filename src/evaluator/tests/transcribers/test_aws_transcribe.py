@@ -186,9 +186,9 @@ class TestAWSTranscribeTranscriber:
     # ------------------------------------------------------------------
 
     def test_name_property(self, mock_env, mock_boto3):
-        """name returns 'AWS Transcribe'."""
+        """name returns 'AWSTranscribe'."""
         transcriber = AWSTranscribeTranscriber()
-        assert transcriber.name == "AWS Transcribe"
+        assert transcriber.name == "AWSTranscribe"
 
     # ------------------------------------------------------------------
     # _format_timestamp
@@ -234,7 +234,7 @@ class TestAWSTranscribeTranscriber:
 
         # Result shape
         assert isinstance(result, TranscriptResult)
-        assert result.name == "AWS Transcribe"
+        assert result.name == "AWSTranscribe"
         assert len(result.conversation) == 2
 
         # First speaker group (spk_0): "Hello there,"
@@ -473,7 +473,7 @@ class TestAWSTranscribeTranscriber:
         result = await transcriber.transcribe("audio.mp3")
 
         assert isinstance(result, TranscriptResult)
-        assert result.name == "AWS Transcribe"
+        assert result.name == "AWSTranscribe"
 
     # ------------------------------------------------------------------
     # Factory registration
