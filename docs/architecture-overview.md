@@ -150,9 +150,6 @@ Registrations are wired in `src/evaluator/transcribers/__init__.py`:
 | `"AWSTranscribe"` | `AWSTranscribeTranscriber` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_S3_BUCKET` |
 | `"Voxtral"` | `MistralVoxtralTranscriber` | `MISTRAL_API_KEY` |
 
-> **Note:** `src/evaluator/transcribers/google_speech_to_text.py` exists as an
-> unimplemented stub and is not registered.
-
 #### Output types
 
 ```python

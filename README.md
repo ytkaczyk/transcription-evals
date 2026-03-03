@@ -8,7 +8,6 @@ A comprehensive framework for evaluating audio transcription models (Speech-to-T
   - ✅ [Deepgram](https://deepgram.com/)
   - ✅ [AssemblyAI](https://www.assemblyai.com/)
   - ✅ [AWS Transcribe](https://aws.amazon.com/transcribe/)
-  - ⌛ [Google Speech-to-Text](https://cloud.google.com/speech-to-text) (pending implementation)
   - ✅ [Voxtral](https://mistral.ai/)
 
 - **Lazy Transcription**: Skip re-transcribing files that already have results, saving time and API costs
@@ -72,7 +71,6 @@ transcription-evals/
 │   │   │   ├── deepgram.py
 │   │   │   ├── assembly_ai.py
 │   │   │   ├── aws_transcribe.py
-│   │   │   ├── google_speech_to_text.py
 │   │   │   └── mistral_voxtral.py
 │   │   ├── tests/              # Unit tests
 │   │   └── pyproject.toml
@@ -97,7 +95,6 @@ transcription-evals/
   - `DEEPGRAM_API_KEY` - [Get Deepgram key](https://console.deepgram.com/)
   - `ASSEMBLYAI_API_KEY` - [Get AssemblyAI key](https://www.assemblyai.com/)
   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_S3_BUCKET` - [Configure AWS credentials](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html)
-  - `GOOGLE_APPLICATION_CREDENTIALS` - [Set up Google Cloud](https://cloud.google.com/speech-to-text/docs/before-you-begin)
   - `MISTRAL_API_KEY` - [Get Mistral key](https://console.mistral.ai/api-keys/)
 
 ### Installation
@@ -213,7 +210,7 @@ The experiment configuration is a JSON file that defines your evaluation setup. 
   - `transcript`: Ground truth transcript JSON file (used for WER calculation)
 
 - **`models`** (Required): Array of transcription providers to evaluate
-  - `name`: Provider name (`"Deepgram"`, `"AssemblyAI"`, `"AwsTranscribe"`, `"GoogleSpeechToText"`, `"MistralVoxtral"`)
+  - `name`: Provider name (`"Deepgram"`, `"AssemblyAI"`, `"AwsTranscribe"`, `"MistralVoxtral"`)
   - `label` (Optional): Custom identifier appended to output filenames (e.g., `"nova-3"`)
   - `options` (Optional): Provider-specific parameters (model selection, language, etc.)
 
@@ -253,14 +250,6 @@ The experiment configuration is a JSON file that defines your evaluation setup. 
   "options": {
     "language_code": "en-US"
   }
-}
-```
-
-### Google Speech-to-Text
-```json
-{
-  "name": "GoogleSpeechToText",
-  "label": "default"
 }
 ```
 
