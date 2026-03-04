@@ -358,6 +358,59 @@ uv add --dev package_name
 uv sync
 ```
 
+## Methodology
+
+All error metrics are computed using [JiWER](https://jitsi.github.io/jiwer/), a standard Python library for ASR evaluation. Metrics are calculated by aligning the **hypothesis** (model output) against the **reference** (ground truth) after applying a text transformation pipeline to both strings.
+
+### Metrics
+
+| Metric | Full Name | What it measures |
+|---|---|---|
+| **WER** | Word Error Rate | Proportion of words that must be inserted, deleted, or substituted to match the reference. The primary industry-standard metric for ASR quality. |
+| **MER** | Match Error Rate | Proportion of reference words that are not matched correctly; less sensitive than WER to transcript-length differences. |
+| **WIL** | Word Information Lost | Fraction of word information from the reference that is not conveyed by the hypothesis. |
+| **CER** | Character Error Rate | Same alignment principle as WER but applied at the character level; useful for agglutinative language content or when word-boundary conventions differ between providers. |
+
+Each metric is reported in two variants: **standard** and **normalized**.
+
+---
+
+### Standard metrics (`wer`, `mer`, `wil`, `cer`)
+
+Standard metrics use JiWER's built-in `wer_default` transformation pipeline, which performs only minimal pre-processing to prepare the text for alignment without altering its linguistic content:
+
+| Transform | Effect |
+|---|---|
+| `RemoveMultipleSpaces` | Collapses consecutive whitespace characters into a single space so tokenization is not affected by incidental spacing differences. |
+| `Strip` | Removes leading and trailing whitespace from each segment. |
+| `ReduceToListOfListOfWords` | Tokenizes each segment into a list of word tokens — the required terminal step for word-level alignment. |
+
+Because punctuation, casing, and contractions are left intact, standard scores reflect **surface-form differences** between the hypothesis and the reference. This is appropriate when evaluating whether a provider's output is ready for direct downstream use (e.g., verbatim captioning or legal transcription).
+
+---
+
+### Normalized metrics (`normalized_wer`, `normalized_mer`, `normalized_wil`, `normalized_cer`)
+
+Normalized metrics use a custom pipeline (`wer_standardize_nopunctuation_contiguous`) that aggressively normalizes both strings before alignment. This pipeline is an extension of JiWER's `wer_standardize_contiguous` preset with the addition of punctuation removal:
+
+| Transform | Effect |
+|---|---|
+| `ToLowerCase` | Converts all characters to lowercase, eliminating case-sensitivity differences between providers (e.g., `NATO` vs `nato`). |
+| `ExpandCommonEnglishContractions` | Expands contracted forms to their full equivalents (e.g., `won't` → `will not`, `it's` → `it is`), so differences in contraction handling do not penalize a provider. |
+| `RemoveKaldiNonWords` | Strips ASR-specific meta-tokens such as `[laugh]`, `[noise]`, or `<unk>` that some engines inject into output but that carry no transcription content. |
+| `RemoveWhiteSpace(replace_by_space=True)` | Replaces all whitespace variants (tabs, newlines, non-breaking spaces) with a regular space, ensuring consistent tokenization across provider outputs. |
+| `RemoveMultipleSpaces` | Collapses any consecutive spaces produced by earlier transforms into a single space. |
+| `RemovePunctuation` | Removes all Unicode punctuation characters, so differences in comma placement, hyphenation style, or quotation-mark convention do not affect the score. |
+| `Strip` | Removes any remaining leading/trailing whitespace from each segment. |
+| `ReduceToSingleSentence` | Concatenates all segments into one continuous string. This is required when the reference and hypothesis may have been segmented differently (e.g., sentence-per-line vs. paragraph), ensuring alignment is performed over the full transcript rather than segment-by-segment. |
+| `ReduceToListOfListOfWords` | Tokenizes the unified string into word tokens — the required terminal step for word-level alignment. |
+
+Because both sides of the comparison are normalized identically, these scores are **more lenient and more comparable across providers**. They are better suited for ranking models on pure recognition accuracy independent of formatting conventions. Normalized scores will generally be equal to or lower than their standard counterparts.
+
+> **Choosing the right metric:** Use standard WER when the output will be used verbatim and formatting matters. Use normalized WER to compare recognition accuracy across providers whose punctuation and capitalization conventions differ.
+
+---
+
 ## Reporting
 
 The evaluator automatically generates multiple report formats:
@@ -366,6 +419,51 @@ The evaluator automatically generates multiple report formats:
 - **Statistics JSON**: WER calculations and error metrics for each model/file combination
 - **Excel Report**: Comparative table across all models (if template provided)
 - **Markdown Summary**: Human-readable evaluation summary
+
+### Sample Markdown Report
+
+The Markdown report (`<eval-name>-report.md`) is structured in three sections. Below is an abridged example based on a real podcasts evaluation run.
+
+#### Inputs
+
+Lists every audio file and its corresponding ground truth transcript, along with audio metadata (encoding, sampling rate, channel count, duration) and reference word count.
+
+| File | Encoding | Sampling | Channels | Duration | Transcript | Length |
+|---|---|---|---|---|---|---|
+| sample-01.mp3 | MP3 | 16 kHz | 1 (mono) | 00:23:17 | sample-01.json | 2930 words |
+| sample-02.mp3 | MP3 | 16 kHz | 1 (mono) | 00:19:25 | sample-02.json | 2549 words |
+| … | | | | | | |
+
+#### Evals
+
+One table per provider with all four standard and normalised metrics for each audio file:
+
+**AssemblyAI (v3)**
+
+| Audio File | WER | MER | WIL | CER | norm WER | norm MER | norm WIL | norm CER |
+|---|---|---|---|---|---|---|---|---|
+| sample-01.mp3 | 7.8% | 7.8% | 14.1% | 1.6% | 1.6% | 1.6% | 2.7% | 1.6% |
+| sample-02.mp3 | 7.4% | 7.3% | 13.2% | 1.8% | 2.5% | 2.5% | 4.1% | 2.5% |
+| … | | | | | | | | |
+
+**Voxtral**
+
+| Audio File | WER | MER | WIL | CER | norm WER | norm MER | norm WIL | norm CER |
+|---|---|---|---|---|---|---|---|---|
+| sample-01.mp3 | 9.1% | 9.0% | 16.0% | 2.9% | 2.6% | 2.6% | 4.1% | 2.6% |
+| sample-02.mp3 | 8.4% | 8.4% | 15.0% | 3.0% | 2.5% | 2.4% | 3.9% | 2.5% |
+| … | | | | | | | | |
+
+#### Summary
+
+Aggregated statistics (average, min, max, standard deviation of WER) across all inputs, for both standard and normalised variants — one row per provider:
+
+| Model | Label | avg WER | min WER | max WER | std WER | avg norm WER | min norm WER | max norm WER | std norm WER |
+|---|---|---|---|---|---|---|---|---|---|
+| AssemblyAI | v3 | 7.5% | 6.9% | 7.8% | 0.4% | 1.8% | 1.3% | 2.5% | 0.5% |
+| AWSTranscribe | | 8.3% | 6.8% | 9.4% | 1.1% | 2.2% | 1.3% | 3.3% | 0.8% |
+| Deepgram | | 10.3% | 8.9% | 11.4% | 1.1% | 3.2% | 1.5% | 4.5% | 1.2% |
+| Voxtral | | 11.0% | 7.8% | 19.3% | 4.7% | 2.2% | 1.6% | 2.6% | 0.5% |
 
 ## Troubleshooting
 
